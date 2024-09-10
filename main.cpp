@@ -418,34 +418,40 @@ void MathFactsWidget::PaintProblemText(
          current_problem_.line2);
 
    // add a bit of space between the lines
+   const int32_t line_space_gap { 10 };
    const int32_t line_height =
-      text_bounding_rect.height() + 10;
+      text_bounding_rect.height() +
+      line_space_gap;
 
    text_painter.drawText(
       QRect { 0, 0, text_pixmap.width(), text_pixmap.height() },
       current_problem_.line1,
       QTextOption { Qt::AlignmentFlag::AlignRight });
+
    text_painter.drawText(
       QRect { 0, line_height, text_pixmap.width(), text_pixmap.height() },
       current_problem_.line2,
       QTextOption { Qt::AlignmentFlag::AlignRight });
 
-   const int32_t max_line_width =
+   text_painter.drawText(
+      QRect { 0, line_height * 2 + 40, text_pixmap.width(), text_pixmap.height() },
+      current_problem_.line3,
+      QTextOption { Qt::AlignmentFlag::AlignRight });
+
+   const int32_t answer_line_width =
       text_bounding_rect.width();
+   const qreal answer_line_y =
+      line_height * 2 + 40 +
+      (font_metrics.ascent() - text_bounding_rect.height()) / 1.25;
 
    // draw the answer line
    text_painter.drawLine(
       QPointF {
          static_cast< qreal >(text_pixmap.width()),
-         line_height * 2.0 * devicePixelRatio() },
+         answer_line_y },
       QPointF {
-         static_cast< qreal >(text_pixmap.width() - max_line_width),
-         line_height * 2.0 * devicePixelRatio() });
-
-   text_painter.drawText(
-      QRect { 0, line_height * 2 + 40, text_pixmap.width(), text_pixmap.height() },
-      current_problem_.line3,
-      QTextOption { Qt::AlignmentFlag::AlignRight });
+         static_cast< qreal >(text_pixmap.width() - answer_line_width),
+         answer_line_y });
 
    // aspect of the inner background box
    const qreal background_box_width { width() - 60.0 };
@@ -456,7 +462,7 @@ void MathFactsWidget::PaintProblemText(
    };
 
    const qreal problem_width =
-      max_line_width * devicePixelRatio();
+      answer_line_width * devicePixelRatio();
    const qreal problem_height =
       (line_height * 3 + 40) * devicePixelRatio();
    const qreal problem_crop_x_start =
