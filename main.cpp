@@ -428,10 +428,13 @@ void MathFactsWidget::PaintProblemText(
       current_problem_.line1,
       QTextOption { Qt::AlignmentFlag::AlignRight });
 
+   QRect line2_bounding_box;
+   
    text_painter.drawText(
       QRect { 0, line_height, text_pixmap.width(), text_pixmap.height() },
+      Qt::AlignmentFlag::AlignRight,
       current_problem_.line2,
-      QTextOption { Qt::AlignmentFlag::AlignRight });
+      &line2_bounding_box);
 
    text_painter.drawText(
       QRect { 0, line_height * 2 + 40, text_pixmap.width(), text_pixmap.height() },
@@ -462,9 +465,9 @@ void MathFactsWidget::PaintProblemText(
    };
 
    const qreal problem_width =
-      answer_line_width * devicePixelRatio();
+      line2_bounding_box.width();
    const qreal problem_height =
-      (line_height * 3 + 40) * devicePixelRatio();
+      (line_height * 2 + 40 + font_metrics.height());
    const qreal problem_crop_x_start =
       text_pixmap.width() - problem_width;
 
