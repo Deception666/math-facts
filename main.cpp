@@ -1,21 +1,24 @@
 #include <QtCore/QRect>
+#include <QtCore/QRectF>
 #include <QtCore/QSize>
 #include <QtCore/QString>
 #include <QtCore/Qt>
+#include <QtCore/QTimer>
 #include <QtGui/QBrush>
 #include <QtGui/QColor>
 #include <QtGui/QFont>
 #include <QtGui/QFontMetrics>
 #include <QtGui/QPainter>
 #include <QtGui/QPaintEvent>
+#include <QtGui/QPen>
 #include <QtGui/QPixmap>
-#include <QtGui/QRgb>
 #include <QtGui/QTextOption>
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QWidget>
 
 #include <algorithm>
 #include <array>
+#include <chrono>
 #include <cstdint>
 #include <random>
 
@@ -31,6 +34,9 @@ protected:
       QPaintEvent * paint_event ) override;
    virtual void keyReleaseEvent(
       QKeyEvent * event ) override;
+
+private slots:
+   void OnAnswerImageTimeout( ) noexcept;
 
 private:
    struct Colors
@@ -64,6 +70,7 @@ private:
    };
 
    void SetupColors( ) noexcept;
+   void SetupAnswerImages( ) noexcept;
 
    Problem GenerateProblem( ) noexcept;
    void GenerateAdditionProblem( ) noexcept;
@@ -78,6 +85,8 @@ private:
       QPaintEvent * paint_event ) noexcept;
    void PaintProblemText(
       QPaintEvent * paint_event ) noexcept;
+   void PaintAnswerImage(
+      QPaintEvent * paint_event ) noexcept;
 
    const Colors * current_colors_;
    std::array< Colors, 6 > colors_;
@@ -85,17 +94,30 @@ private:
    Problem current_problem_;
    Randomizers randomizers_;
 
+   const QPixmap * answer_image_;
+   QPixmap wrong_answer_image_;
+   QPixmap correct_answer_image_;
+
 };
 
 MathFactsWidget::MathFactsWidget(
    QWidget * const parent ) noexcept :
 QWidget { parent },
-current_colors_ { nullptr }
+current_colors_ { nullptr },
+answer_image_ { nullptr }
 {
    SetupColors();
+   SetupAnswerImages();
 
    current_problem_ =
       GenerateProblem();
+}
+
+void MathFactsWidget::OnAnswerImageTimeout( ) noexcept
+{
+   answer_image_ = nullptr;
+
+   update();
 }
 
 void MathFactsWidget::paintEvent(
@@ -201,6 +223,14 @@ void MathFactsWidget::SetupColors( ) noexcept
 
    current_colors_ =
       &colors_[0];
+}
+
+void MathFactsWidget::SetupAnswerImages( ) noexcept
+{
+   wrong_answer_image_.load(
+      ":/wrong-answer-image");
+   correct_answer_image_.load(
+      ":/correct-answer-image");
 }
 
 MathFactsWidget::Problem MathFactsWidget::GenerateProblem( ) noexcept
@@ -330,10 +360,20 @@ void MathFactsWidget::GradeAnswer( ) noexcept
 
       current_colors_ =
          &colors_[new_colors_index];
+
+      answer_image_ = &correct_answer_image_;
    }
    else
    {
+      current_problem_.line3.clear();
+
+      answer_image_ = &wrong_answer_image_;
    }
+
+   QTimer::singleShot(
+      std::chrono::seconds { 1 },
+      this,
+      &MathFactsWidget::OnAnswerImageTimeout);
 }
 
 void MathFactsWidget::PaintProblem(
@@ -343,6 +383,9 @@ void MathFactsWidget::PaintProblem(
       paint_event);
 
    PaintProblemText(
+      paint_event);
+
+   PaintAnswerImage(
       paint_event);
 }
 
@@ -518,6 +561,23 @@ void MathFactsWidget::PaintProblemText(
          0.0,
          text_pixmap.width() - problem_crop_x_start,
          problem_height });
+}
+
+void MathFactsWidget::PaintAnswerImage(
+   QPaintEvent * paint_event ) noexcept
+{
+   if (answer_image_)
+   {
+      const qreal window_length =
+         std::min(
+            width() * 0.3,
+            height() * 0.3);
+
+      QPainter { this }.drawPixmap(
+         QRectF { 30.0, 30.0, window_length, window_length },
+         *answer_image_,
+         answer_image_->rect());
+   }
 }
 
 int main(

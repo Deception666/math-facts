@@ -1,5 +1,7 @@
 <RCC>
    <qresource prefix="/">
       <file alias="mainicon">mainicon.ico</file>
+      <file alias="correct-answer-image">correct-answer.png</file>
+      <file alias="wrong-answer-image">wrong-answer.png</file>
    </qresource>
 </RCC>
