@@ -464,9 +464,9 @@ void MathFactsWidget::GenerateSubtractionProblem( ) noexcept
 
 void MathFactsWidget::GenerateMultiplicationProblem( ) noexcept
 {
-   for (int32_t top { }; top <= 10; ++top)
+   for (int32_t top { }; top <= 12; ++top)
    {
-      for (int32_t bottom { }; bottom <= 10; ++bottom)
+      for (int32_t bottom { }; bottom <= 12; ++bottom)
       {
          randomizers_.multiplication_problems.emplace_back(
             Problem {
