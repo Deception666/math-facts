@@ -538,6 +538,10 @@ void MathFactsWidget::PaintBackground(
       this
    };
 
+   painter.setRenderHint(
+      QPainter::RenderHint::Antialiasing,
+      true);
+
    painter.setBrush(
       QBrush {
          current_colors_->background
@@ -574,6 +578,13 @@ void MathFactsWidget::PaintProblemText(
       &text_pixmap
    };
 
+   text_painter.setRenderHint(
+      QPainter::RenderHint::Antialiasing,
+      true);
+   text_painter.setRenderHint(
+      QPainter::RenderHint::TextAntialiasing,
+      true);
+
    const QFont font {
       "Comic Sans MS",
       200
@@ -589,9 +600,6 @@ void MathFactsWidget::PaintProblemText(
          QBrush { current_colors_->text },
          10.0
       });
-
-   text_painter.setRenderHint(
-      QPainter::RenderHint::TextAntialiasing);
 
    const QFontMetrics font_metrics {
       text_painter.font()
@@ -691,7 +699,13 @@ void MathFactsWidget::PaintProblemText(
       }
    }
 
-   QPainter { this }.drawPixmap(
+   QPainter painter { this };
+
+   painter.setRenderHint(
+      QPainter::RenderHint::SmoothPixmapTransform,
+      true);
+
+   painter.drawPixmap(
       QRectF { 
          width() / 2.0 - scaled_width / 2.0,
          height() / 2.0 - scaled_height / 2.0,
@@ -715,7 +729,13 @@ void MathFactsWidget::PaintAnswerImage(
             width() * 0.3,
             height() * 0.3);
 
-      QPainter { this }.drawPixmap(
+      QPainter painter { this };
+
+      painter.setRenderHint(
+         QPainter::RenderHint::SmoothPixmapTransform,
+         true);
+
+      painter.drawPixmap(
          QRectF { 30.0, 30.0, window_length, window_length },
          *answer_image_,
          answer_image_->rect());
