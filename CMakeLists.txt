@@ -30,7 +30,8 @@ find_package(
    COMPONENTS
       Core
       Gui
-      Widgets)
+      Widgets
+      UiTools)
 
 if (NOT QT5_FOUND)
    find_package(
@@ -39,7 +40,8 @@ if (NOT QT5_FOUND)
       COMPONENTS
          Core
          Gui
-         Widgets)
+         Widgets
+         UiTools)
 
    set(
       qt_version_major
@@ -51,7 +53,8 @@ target_link_libraries(
    PRIVATE
    Qt::Core
    Qt::Gui
-   Qt::Widgets)
+   Qt::Widgets
+   Qt::UiTools)
 
 string(
    CONCAT

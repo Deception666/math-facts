@@ -3,5 +3,8 @@
       <file alias="mainicon">mainicon.ico</file>
       <file alias="correct-answer-image">correct-answer.png</file>
       <file alias="wrong-answer-image">wrong-answer.png</file>
+      <file alias="math-facts-title-image">math-facts-title.png</file>
+      <file alias="math-buttons-image-sheet">math-buttons-image-sheet.png</file>
+      <file alias="title-stage-buttons-ui">title-stage-buttons.ui</file>
    </qresource>
 </RCC>

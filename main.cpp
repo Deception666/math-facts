@@ -1,3 +1,4 @@
+#include <QtCore/QFile>
 #include <QtCore/QRect>
 #include <QtCore/QRectF>
 #include <QtCore/QSize>
@@ -8,18 +9,23 @@
 #include <QtGui/QColor>
 #include <QtGui/QFont>
 #include <QtGui/QFontMetrics>
+#include <QtGui/QKeyEvent>
 #include <QtGui/QPainter>
-#include <QtGui/QPaintEvent>
 #include <QtGui/QPen>
 #include <QtGui/QPixmap>
 #include <QtGui/QTextOption>
+#include <QtUiTools/QUiLoader>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QPushButton>
 #include <QtWidgets/QWidget>
+#include <QtGui/QIcon>
 
 #include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstdint>
+#include <functional>
+#include <memory>
 #include <random>
 
 class MathFactsWidget :
@@ -36,7 +42,18 @@ protected:
       QKeyEvent * event ) override;
 
 private slots:
+   enum class TitleButtonID : uint8_t
+   {
+      ADD,
+      SUB,
+      MUL,
+      DIV,
+      ALL
+   };
+
    void OnAnswerImageTimeout( ) noexcept;
+   void OnTitleButtonPressed(
+      const TitleButtonID title_button_id ) noexcept;
 
 private:
    struct Colors
@@ -69,8 +86,15 @@ private:
       std::vector< Problem > multiplication_problems;
    };
 
+   enum class Stage : uint8_t
+   {
+      TITLE,
+      MATH_PRACTICE
+   };
+
    void SetupColors( ) noexcept;
    void SetupAnswerImages( ) noexcept;
+   void SetupTitleStage( ) noexcept;
 
    Problem GenerateProblem( ) noexcept;
    void GenerateAdditionProblem( ) noexcept;
@@ -87,6 +111,13 @@ private:
       QPaintEvent * paint_event ) noexcept;
    void PaintAnswerImage(
       QPaintEvent * paint_event ) noexcept;
+   void PaintTitleStage(
+      QPaintEvent * paint_event ) noexcept;
+
+   Stage current_stage_;
+
+   TitleButtonID chosen_problems_;
+   std::unique_ptr< QWidget > title_stage_buttons_;
 
    const Colors * current_colors_;
    std::array< Colors, 6 > colors_;
@@ -103,14 +134,15 @@ private:
 MathFactsWidget::MathFactsWidget(
    QWidget * const parent ) noexcept :
 QWidget { parent },
+current_stage_ { Stage::TITLE },
+chosen_problems_ { },
+title_stage_buttons_ { nullptr },
 current_colors_ { nullptr },
 answer_image_ { nullptr }
 {
    SetupColors();
    SetupAnswerImages();
-
-   current_problem_ =
-      GenerateProblem();
+   SetupTitleStage();
 }
 
 void MathFactsWidget::OnAnswerImageTimeout( ) noexcept
@@ -120,14 +152,42 @@ void MathFactsWidget::OnAnswerImageTimeout( ) noexcept
    update();
 }
 
+void MathFactsWidget::OnTitleButtonPressed(
+   const TitleButtonID title_button_id ) noexcept
+{
+   if (title_button_id != TitleButtonID::DIV)
+   {
+      chosen_problems_ =
+         title_button_id;
+
+      title_stage_buttons_.reset();
+
+      current_stage_ =
+         Stage::MATH_PRACTICE;
+
+      current_problem_ =
+         GenerateProblem();
+
+      update();
+   }
+}
+
 void MathFactsWidget::paintEvent(
    QPaintEvent * paint_event )
 {
    QWidget::paintEvent(
       paint_event);
 
-   PaintProblem(
-      paint_event);
+   if (Stage::TITLE == current_stage_)
+   {
+      PaintTitleStage(
+         paint_event);
+   }
+   else
+   {
+      PaintProblem(
+         paint_event);
+   }
 }
 
 void MathFactsWidget::keyReleaseEvent(
@@ -233,15 +293,97 @@ void MathFactsWidget::SetupAnswerImages( ) noexcept
       ":/correct-answer-image");
 }
 
+void MathFactsWidget::SetupTitleStage( ) noexcept
+{
+   QFile title_stage_buttons_file {
+      ":/title-stage-buttons-ui"
+   };
+
+   // assume it will always open
+   title_stage_buttons_file.open(
+      QFile::OpenModeFlag::ReadOnly);
+
+   title_stage_buttons_.reset(
+      QUiLoader { }.load(
+         &title_stage_buttons_file,
+         nullptr)); // ownership via smart pointer
+
+   if (title_stage_buttons_)
+   {
+      title_stage_buttons_->setParent(
+         this);
+
+      struct ButtonSetup
+      {
+         const char * const object_name;
+         QRect image_sheet_rect;
+         TitleButtonID id;
+      };
+
+      const QPixmap math_buttons_image_sheet {
+         ":/math-buttons-image-sheet"
+      };
+
+      const ButtonSetup button_setup[] {
+         { "pushButtonAdd", { 0, 0, 141, 143 }, TitleButtonID::ADD },
+         { "pushButtonSub", { 142, 0, 141, 143 }, TitleButtonID::SUB },
+         { "pushButtonMul", { 284, 0, 141, 143 }, TitleButtonID::MUL },
+         { "pushButtonDiv", { 428, 0, 141, 143 }, TitleButtonID::DIV },
+         { "pushButtonAll", math_buttons_image_sheet.rect(), TitleButtonID::ALL }
+      };
+
+      for (const auto & button : button_setup)
+      {
+         QPushButton * push_button =
+            title_stage_buttons_->findChild< QPushButton * >(
+               button.object_name,
+               Qt::FindChildOption::FindChildrenRecursively);
+
+         QPixmap button_image =
+            math_buttons_image_sheet.copy(
+               button.image_sheet_rect);
+
+         push_button->setIcon(
+            QIcon { button_image });
+         push_button->setIconSize(
+            QSize { 
+               math_buttons_image_sheet.width() / 2,
+               math_buttons_image_sheet.height() / 2 });
+
+         QObject::connect(
+            push_button,
+            &QPushButton::pressed,
+            std::bind(
+               &MathFactsWidget::OnTitleButtonPressed,
+               this,
+               button.id));
+      }
+   }
+}
+
 MathFactsWidget::Problem MathFactsWidget::GenerateProblem( ) noexcept
 {
    if (randomizers_.addition_problems.empty() &&
        randomizers_.subtraction_problems.empty() &&
        randomizers_.multiplication_problems.empty())
    {
-      GenerateAdditionProblem();
-      GenerateSubtractionProblem();
-      GenerateMultiplicationProblem();
+      if (TitleButtonID::ADD == chosen_problems_ ||
+          TitleButtonID::ALL == chosen_problems_)
+      {
+         GenerateAdditionProblem();
+      }
+
+      if (TitleButtonID::SUB == chosen_problems_ ||
+          TitleButtonID::ALL == chosen_problems_)
+      {
+         GenerateSubtractionProblem();
+      }
+
+      if (TitleButtonID::MUL == chosen_problems_ ||
+          TitleButtonID::ALL == chosen_problems_)
+      {
+         GenerateMultiplicationProblem();
+      }
    }
 
    std::vector< Problem > * const problems[] {
@@ -580,6 +722,41 @@ void MathFactsWidget::PaintAnswerImage(
    }
 }
 
+void MathFactsWidget::PaintTitleStage(
+   QPaintEvent * paint_event ) noexcept
+{
+   PaintBackground(
+      paint_event);
+
+   const auto title_pixmap =
+      QPixmap { ":/math-facts-title-image" }.scaledToWidth(
+         width() - 60,
+         Qt::TransformationMode::SmoothTransformation);
+
+   QPainter title_painter { this };
+
+   title_painter.setRenderHint(
+      QPainter::RenderHint::Antialiasing,
+      true);
+   title_painter.setRenderHint(
+      QPainter::RenderHint::SmoothPixmapTransform,
+      true);
+
+   title_painter.drawPixmap(
+      QRect { 30, 30, width() - 60, title_pixmap.height() },
+      title_pixmap);
+
+   if (title_stage_buttons_)
+   {
+      title_stage_buttons_->setGeometry(
+         QRect {
+            0,
+            title_pixmap.height() + 40,
+            width(),
+            height() - title_pixmap.height() - 70 });
+   }
+}
+
 int main(
    int argc,
    char ** argv )
@@ -591,6 +768,8 @@ int main(
 
    application.setWindowIcon(
       QIcon { ":/mainicon" });
+   application.setStyle(
+      "Fusion");
 
    MathFactsWidget math_facts_widget {
       nullptr
