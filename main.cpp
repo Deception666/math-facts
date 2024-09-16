@@ -4,11 +4,13 @@
 #include <QtCore/QSize>
 #include <QtCore/QString>
 #include <QtCore/Qt>
+#include <QtCore/QtGlobal>
 #include <QtCore/QTimer>
 #include <QtGui/QBrush>
 #include <QtGui/QColor>
 #include <QtGui/QFont>
 #include <QtGui/QFontMetrics>
+#include <QtGui/QIcon>
 #include <QtGui/QKeyEvent>
 #include <QtGui/QPainter>
 #include <QtGui/QPen>
@@ -18,10 +20,10 @@
 #include <QtWidgets/QApplication>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QWidget>
-#include <QtGui/QIcon>
 
 #include <algorithm>
 #include <array>
+#include <cassert>
 #include <chrono>
 #include <cstdint>
 #include <functional>
@@ -86,6 +88,17 @@ private:
       std::vector< Problem > multiplication_problems;
    };
 
+   struct Stopwatch
+   {
+      QPixmap base_image;
+      QPixmap hand_image;
+
+      QTimer periodic_update_timer;
+
+      std::chrono::steady_clock::time_point start_time;
+      std::chrono::steady_clock::time_point end_time;
+   };
+
    enum class Stage : uint8_t
    {
       TITLE,
@@ -94,6 +107,7 @@ private:
 
    void SetupColors( ) noexcept;
    void SetupAnswerImages( ) noexcept;
+   void SetupStopwatchImages( ) noexcept;
    void SetupTitleStage( ) noexcept;
 
    Problem GenerateProblem( ) noexcept;
@@ -110,6 +124,8 @@ private:
    void PaintProblemText(
       QPaintEvent * paint_event ) noexcept;
    void PaintAnswerImage(
+      QPaintEvent * paint_event ) noexcept;
+   void PaintStopwatch(
       QPaintEvent * paint_event ) noexcept;
    void PaintTitleStage(
       QPaintEvent * paint_event ) noexcept;
@@ -129,6 +145,8 @@ private:
    QPixmap wrong_answer_image_;
    QPixmap correct_answer_image_;
 
+   Stopwatch practice_stopwatch_;
+
 };
 
 MathFactsWidget::MathFactsWidget(
@@ -142,6 +160,7 @@ answer_image_ { nullptr }
 {
    SetupColors();
    SetupAnswerImages();
+   SetupStopwatchImages();
    SetupTitleStage();
 }
 
@@ -169,6 +188,21 @@ void MathFactsWidget::OnTitleButtonPressed(
          GenerateProblem();
 
       update();
+
+      QObject::connect(
+         &practice_stopwatch_.periodic_update_timer,
+         &QTimer::timeout,
+         this,
+         qOverload< >(&MathFactsWidget::update));
+
+      practice_stopwatch_.periodic_update_timer.start(
+         std::chrono::milliseconds { 500 });
+
+      practice_stopwatch_.start_time =
+         std::chrono::steady_clock::now();
+      practice_stopwatch_.end_time =
+         practice_stopwatch_.start_time +
+         std::chrono::minutes { 5 };
    }
 }
 
@@ -291,6 +325,14 @@ void MathFactsWidget::SetupAnswerImages( ) noexcept
       ":/wrong-answer-image");
    correct_answer_image_.load(
       ":/correct-answer-image");
+}
+
+void MathFactsWidget::SetupStopwatchImages( ) noexcept
+{
+   practice_stopwatch_.base_image.load(
+      ":/stopwatch-base-image");
+   practice_stopwatch_.hand_image.load(
+      ":/stopwatch-hand-image");
 }
 
 void MathFactsWidget::SetupTitleStage( ) noexcept
@@ -529,6 +571,9 @@ void MathFactsWidget::PaintProblem(
 
    PaintAnswerImage(
       paint_event);
+
+   PaintStopwatch(
+      paint_event);
 }
 
 void MathFactsWidget::PaintBackground(
@@ -740,6 +785,64 @@ void MathFactsWidget::PaintAnswerImage(
          *answer_image_,
          answer_image_->rect());
    }
+}
+
+void MathFactsWidget::PaintStopwatch(
+   QPaintEvent * paint_event) noexcept
+{
+   assert(
+      practice_stopwatch_.base_image.size() ==
+      (QSize { 512, 512 }));
+   assert(
+      practice_stopwatch_.hand_image.size() ==
+      (QSize { 42, 152 }));
+
+   QPixmap stopwatch_pixmap {
+      practice_stopwatch_.base_image };
+
+   QPainter stopwatch_painter {
+      &stopwatch_pixmap };
+
+   const auto total_time =
+      practice_stopwatch_.end_time -
+      practice_stopwatch_.start_time;
+   const auto remaining_time =
+      practice_stopwatch_.end_time -
+      std::chrono::steady_clock::now();
+
+   const qreal hand_rotation =
+      remaining_time.count() * 360.0 / total_time.count();
+
+   stopwatch_painter.translate(
+      256.0,
+      284.0);
+   stopwatch_painter.rotate(
+      hand_rotation);
+
+   stopwatch_painter.drawPixmap(
+      QRect {
+         -21, -131,
+         practice_stopwatch_.hand_image.width(),
+         practice_stopwatch_.hand_image.height() },
+      practice_stopwatch_.hand_image);
+
+   const qreal window_length =
+      std::min(
+         width() * 0.3,
+         height() * 0.3);
+
+   QPainter painter { this };
+
+   painter.setRenderHint(
+      QPainter::RenderHint::SmoothPixmapTransform,
+      true);
+
+   painter.drawPixmap(
+      QRectF {
+         30.0, height() - window_length - 30.0,
+         window_length, window_length },
+      stopwatch_pixmap,
+      stopwatch_pixmap.rect());
 }
 
 void MathFactsWidget::PaintTitleStage(

@@ -6,5 +6,7 @@
       <file alias="math-facts-title-image">math-facts-title.png</file>
       <file alias="math-buttons-image-sheet">math-buttons-image-sheet.png</file>
       <file alias="title-stage-buttons-ui">title-stage-buttons.ui</file>
+      <file alias="stopwatch-base-image">stopwatch-base.png</file>
+      <file alias="stopwatch-hand-image">stopwatch-hand.png</file>
    </qresource>
 </RCC>
