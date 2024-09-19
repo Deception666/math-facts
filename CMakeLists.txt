@@ -27,6 +27,7 @@ add_executable(
    WIN32
    main.cpp
    mainicon.ico
+   math-facts.ini
    math-facts.qrc
    math-facts.rc)
 

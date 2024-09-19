@@ -1,6 +1,7 @@
 #include <QtCore/QFile>
 #include <QtCore/QRect>
 #include <QtCore/QRectF>
+#include <QtCore/QSettings>
 #include <QtCore/QSize>
 #include <QtCore/QString>
 #include <QtCore/Qt>
@@ -117,6 +118,8 @@ private:
 
    void GradeAnswer( ) noexcept;
 
+   std::chrono::milliseconds GetMathPracticeDuration( ) const noexcept;
+
    void PaintProblem(
       QPaintEvent * paint_event ) noexcept;
    void PaintBackground(
@@ -202,7 +205,7 @@ void MathFactsWidget::OnTitleButtonPressed(
          std::chrono::steady_clock::now();
       practice_stopwatch_.end_time =
          practice_stopwatch_.start_time +
-         std::chrono::minutes { 5 };
+         GetMathPracticeDuration();
    }
 }
 
@@ -558,6 +561,31 @@ void MathFactsWidget::GradeAnswer( ) noexcept
       std::chrono::seconds { 1 },
       this,
       &MathFactsWidget::OnAnswerImageTimeout);
+}
+
+std::chrono::milliseconds MathFactsWidget::GetMathPracticeDuration( ) const noexcept
+{
+   int32_t duration { 300000 };
+
+   const QSettings settings {
+      "./math-facts.ini",
+      QSettings::Format::IniFormat
+   };
+
+   duration =
+      settings.value(
+         "math_practice_duration_ms",
+         duration).toInt();
+
+   if (duration <= 0)
+   {
+      duration = 300000;
+   }
+
+   return
+      std::chrono::milliseconds {
+         duration
+      };
 }
 
 void MathFactsWidget::PaintProblem(
