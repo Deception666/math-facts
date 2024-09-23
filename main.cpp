@@ -19,6 +19,7 @@
 #include <QtGui/QTextOption>
 #include <QtUiTools/QUiLoader>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QMessageBox>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QWidget>
 
@@ -27,6 +28,10 @@
 #include <cassert>
 #include <chrono>
 #include <cstdint>
+#include <cstdlib>
+#include <filesystem>
+#include <format>
+#include <fstream>
 #include <functional>
 #include <memory>
 #include <random>
@@ -72,6 +77,9 @@ private:
       QString line2;
       QString line3;
       int32_t answer;
+      std::vector< int32_t > responses;
+      std::chrono::steady_clock::time_point start;
+      std::chrono::steady_clock::time_point end;
    };
 
    struct Randomizers
@@ -98,6 +106,13 @@ private:
 
       std::chrono::steady_clock::time_point start_time;
       std::chrono::steady_clock::time_point end_time;
+
+      bool PracticeTimeExceeded( ) const noexcept
+      {
+         return
+            std::chrono::steady_clock::now() >=
+            end_time;
+      }
    };
 
    enum class Stage : uint8_t
@@ -117,8 +132,12 @@ private:
    void GenerateMultiplicationProblem( ) noexcept;
 
    void GradeAnswer( ) noexcept;
+   void WriteReport( ) const noexcept;
 
+   std::string GenerateReportName( ) const noexcept;
+   std::filesystem::path GetReportsDirectory( ) const noexcept;
    std::chrono::milliseconds GetMathPracticeDuration( ) const noexcept;
+   std::chrono::milliseconds CalculateStandardDeviationResponseTime( ) const noexcept;
 
    void PaintProblem(
       QPaintEvent * paint_event ) noexcept;
@@ -141,9 +160,10 @@ private:
    const Colors * current_colors_;
    std::array< Colors, 6 > colors_;
 
-   Problem current_problem_;
    Randomizers randomizers_;
-
+   Problem current_problem_;
+   std::vector< Problem > answered_problems_;
+   
    const QPixmap * answer_image_;
    QPixmap wrong_answer_image_;
    QPixmap correct_answer_image_;
@@ -454,6 +474,9 @@ MathFactsWidget::Problem MathFactsWidget::GenerateProblem( ) noexcept
 
    problems[problem_type]->pop_back();
 
+   problem.start =
+      std::chrono::steady_clock::now();
+
    return
       problem;
 }
@@ -535,8 +558,17 @@ void MathFactsWidget::GradeAnswer( ) noexcept
    const int32_t response =
       current_problem_.line3.toInt();
 
+   current_problem_.responses.push_back(
+      response);
+
    if (response == current_problem_.answer)
    {
+      current_problem_.end =
+         std::chrono::steady_clock::now();
+
+      answered_problems_.emplace_back(
+         std::move(current_problem_));
+
       current_problem_ =
          GenerateProblem();
 
@@ -561,6 +593,272 @@ void MathFactsWidget::GradeAnswer( ) noexcept
       std::chrono::seconds { 1 },
       this,
       &MathFactsWidget::OnAnswerImageTimeout);
+}
+
+void MathFactsWidget::WriteReport( ) const noexcept
+{
+   auto report_directory =
+      GetReportsDirectory();
+
+   const bool can_write_report =
+      !std::filesystem::exists(report_directory) ||
+      std::filesystem::is_directory(report_directory);
+
+   if (!can_write_report)
+   {
+      QMessageBox::critical(
+         nullptr,
+         "Write Report Error",
+         QString {
+            "Cannot write to report directory.  The directory "
+            "'{}' already exists and is not a directory." }
+               .arg(QString::fromStdString(report_directory.string())),
+         QMessageBox::StandardButton::Ok);
+   }
+   else
+   {
+      if (!std::filesystem::exists(report_directory))
+      {
+         std::error_code create_dir_error { };
+         
+         const bool directory_created =
+            std::filesystem::create_directory(
+               report_directory,
+               create_dir_error);
+
+         if (!directory_created)
+         {
+            QMessageBox::critical(
+               nullptr,
+               "Write Report Error",
+               QString {
+                  "Cannot write to report directory.  The directory "
+                  "'{}' could not be created (EC: {})." }
+                     .arg(QString::fromStdString(report_directory.string()))
+                     .arg(QString::fromStdString(create_dir_error.message())),
+               QMessageBox::StandardButton::Ok);
+         }
+      }
+
+      const auto report_filepath =
+         report_directory /
+         (GenerateReportName() +
+          ".txt");
+
+      std::ofstream report_file {
+         report_filepath,
+         std::ios_base::out
+      };
+
+      if (!report_file.is_open())
+      {
+         QMessageBox::critical(
+            nullptr,
+            "Write Report Error",
+            QString {
+               "Cannot write to report file.  The file "
+               "'{}' could not be opened for writing." }
+                  .arg(QString::fromStdString(report_filepath.string())),
+            QMessageBox::StandardButton::Ok);
+      }
+      else
+      {
+         std::vector< const Problem * > answered_problems_for_sort;
+
+         answered_problems_for_sort.reserve(
+            answered_problems_.size());
+
+         qreal percentage_answers_correct { };
+         std::chrono::milliseconds average_response_time { };
+
+         for (const auto & answer : answered_problems_)
+         {
+            average_response_time +=
+               std::chrono::duration_cast<
+                  std::chrono::milliseconds >(
+                     answer.end - answer.start);
+
+            answered_problems_for_sort.push_back(
+               &answer);
+
+            if (answer.responses.size() == 1)
+            {
+               ++percentage_answers_correct;
+            }
+         }
+
+         if (!answered_problems_.empty())
+         {
+            average_response_time /= answered_problems_.size();
+            percentage_answers_correct /= answered_problems_.size();
+         }
+
+         report_file
+            << "duration = "
+            << GetMathPracticeDuration()
+            << "\n";
+
+         report_file
+            << "total problems answered = "
+            << answered_problems_.size()
+            << "\n";
+
+         report_file
+            << "average response time = "
+            << average_response_time
+            << "\n";
+
+         report_file
+            << "standard deviation response time = "
+            << CalculateStandardDeviationResponseTime()
+            << "\n";
+
+         report_file
+            << "percentage correct = "
+            << percentage_answers_correct
+            << "\n";
+
+         const auto PrintAnswer =
+            [ & ] (
+               const Problem & answer )
+            {
+               const auto response_time =
+                  std::chrono::duration_cast<
+                     std::chrono::milliseconds >(
+                        answer.end - answer.start);
+
+               report_file
+                  << answer.line1.toStdString()
+                  << answer.line2.toStdString()
+                  << " = "
+                  << answer.line3.toStdString()
+                  << "; response time ms = "
+                  << response_time
+                  << "; responses = ";
+
+               for (const auto & response : answer.responses)
+               {
+                  report_file
+                     << response
+                     << "   ";
+               }
+
+               report_file << "\n";
+            };
+
+         report_file
+            << "\ntop ten most responses\n";
+
+         std::sort(
+            answered_problems_for_sort.begin(),
+            answered_problems_for_sort.end(),
+            [ ] (
+               const Problem * const l,
+               const Problem * const r )
+            {
+               return
+                  r->responses.size() <
+                  l->responses.size();
+            });
+
+         std::for_each(
+            answered_problems_for_sort.begin(),
+            answered_problems_for_sort.size() >= 10 ?
+               answered_problems_for_sort.begin() + 10 :
+               answered_problems_for_sort.end(),
+            [ & ] (
+               const Problem * const problem )
+            {
+               PrintAnswer(
+                  *problem);
+            });
+
+         report_file
+            << "\ntop ten longest responses\n";
+
+         std::sort(
+            answered_problems_for_sort.begin(),
+            answered_problems_for_sort.end(),
+            [ ] (
+               const Problem * const l,
+               const Problem * const r )
+            {
+               const auto response_time_l =
+                  l->end - l->start;
+               const auto response_time_r =
+                  r->end - r->start;
+
+               return
+                  response_time_r <
+                  response_time_l;
+            });
+
+         std::for_each(
+            answered_problems_for_sort.begin(),
+            answered_problems_for_sort.size() >= 10 ?
+               answered_problems_for_sort.begin() + 10 :
+               answered_problems_for_sort.end(),
+            [ & ] (
+               const Problem * const problem )
+            {
+               PrintAnswer(
+                  *problem);
+            });
+
+         report_file
+            << "\nall answers\n";
+
+         for (const auto & answer : answered_problems_)
+         {
+            PrintAnswer(
+               answer);
+         }
+      }
+   }
+}
+
+std::string MathFactsWidget::GenerateReportName( ) const noexcept
+{
+   const std::string username =
+#if _WIN32
+      std::getenv("USERNAME");
+#elif __linux__ || __unix__
+      std::getenv("USER");
+#else
+#  error "Define for this platform!"
+#endif
+
+   // may throw but lets assume not
+   const std::string date_time =
+      std::format(
+         "{:%F-%H.%M.%OS}",
+         std::chrono::current_zone()->to_local(
+            std::chrono::system_clock::now()));
+
+   return
+      username +
+      "-" +
+      date_time;
+}
+
+std::filesystem::path MathFactsWidget::GetReportsDirectory( ) const noexcept
+{
+   std::string directory { "../math-facts-reports/" };
+
+   const QSettings settings {
+      "./math-facts.ini",
+      QSettings::Format::IniFormat
+   };
+
+   directory =
+      settings.value(
+         "reports_directory",
+         QString::fromStdString(directory))
+            .toString()
+            .toStdString();
+
+   return
+      directory;
 }
 
 std::chrono::milliseconds MathFactsWidget::GetMathPracticeDuration( ) const noexcept
@@ -588,20 +886,85 @@ std::chrono::milliseconds MathFactsWidget::GetMathPracticeDuration( ) const noex
       };
 }
 
+std::chrono::milliseconds MathFactsWidget::CalculateStandardDeviationResponseTime( ) const noexcept
+{
+   std::chrono::milliseconds standard_deviation { };
+
+   if (answered_problems_.size() > 1)
+   {
+      std::chrono::milliseconds average_response_time { };
+
+      for (const auto & answer : answered_problems_)
+      {
+         average_response_time +=
+            std::chrono::duration_cast<
+               std::chrono::milliseconds >(
+                  answer.end - answer.start);
+      }
+      
+      average_response_time /= answered_problems_.size();
+
+      std::chrono::milliseconds::rep sum_of_squares { };
+
+      for (const auto & answer : answered_problems_)
+      {
+         const auto deviation_from_mean =
+            (std::chrono::duration_cast<
+               std::chrono::milliseconds >(
+                  answer.end - answer.start) -
+             average_response_time).count();
+
+         const auto deviation_from_mean_squared =
+            deviation_from_mean * deviation_from_mean;
+
+         sum_of_squares +=
+            deviation_from_mean_squared;
+      }
+
+      const auto variance =
+         sum_of_squares /
+         (answered_problems_.size() - 1.0);
+
+      standard_deviation =
+         std::chrono::milliseconds {
+            static_cast< std::chrono::milliseconds::rep >(
+               std::sqrt(variance))
+         };
+   }
+
+   return
+      standard_deviation;
+}
+
 void MathFactsWidget::PaintProblem(
    QPaintEvent * paint_event ) noexcept
 {
-   PaintBackground(
-      paint_event);
+   if (!practice_stopwatch_.PracticeTimeExceeded())
+   {
+      PaintBackground(
+         paint_event);
 
-   PaintProblemText(
-      paint_event);
+      PaintProblemText(
+         paint_event);
 
-   PaintAnswerImage(
-      paint_event);
+      PaintAnswerImage(
+         paint_event);
 
-   PaintStopwatch(
-      paint_event);
+      PaintStopwatch(
+         paint_event);
+   }
+   else
+   {
+      QMessageBox::information(
+         this,
+         "Time Expired",
+         "The time allotted has expired.",
+         QMessageBox::StandardButton::Ok);
+
+      WriteReport();
+
+      QApplication::exit(0);
+   }
 }
 
 void MathFactsWidget::PaintBackground(

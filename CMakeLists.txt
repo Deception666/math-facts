@@ -3,7 +3,7 @@ cmake_minimum_required(
 
 set(
    CMAKE_CXX_STANDARD
-   17)
+   20)
 set(
    CMAKE_CXX_STANDARD_REQUIRED
    yes)
