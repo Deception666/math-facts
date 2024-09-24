@@ -89,12 +89,13 @@ private:
       };
 
       std::uniform_int_distribution< uint32_t > problem_distribution {
-         0, 2
+         0, 3
       };
 
       std::vector< Problem > addition_problems;
       std::vector< Problem > subtraction_problems;
       std::vector< Problem > multiplication_problems;
+      std::vector< Problem > division_problems;
    };
 
    struct Stopwatch
@@ -130,6 +131,7 @@ private:
    void GenerateAdditionProblem( ) noexcept;
    void GenerateSubtractionProblem( ) noexcept;
    void GenerateMultiplicationProblem( ) noexcept;
+   void GenerateDivisionProblem( ) noexcept;
 
    void GradeAnswer( ) noexcept;
    void WriteReport( ) const noexcept;
@@ -197,36 +199,33 @@ void MathFactsWidget::OnAnswerImageTimeout( ) noexcept
 void MathFactsWidget::OnTitleButtonPressed(
    const TitleButtonID title_button_id ) noexcept
 {
-   if (title_button_id != TitleButtonID::DIV)
-   {
-      chosen_problems_ =
-         title_button_id;
+   chosen_problems_ =
+      title_button_id;
 
-      title_stage_buttons_.reset();
+   title_stage_buttons_.reset();
 
-      current_stage_ =
-         Stage::MATH_PRACTICE;
+   current_stage_ =
+      Stage::MATH_PRACTICE;
 
-      current_problem_ =
-         GenerateProblem();
+   current_problem_ =
+      GenerateProblem();
 
-      update();
+   update();
 
-      QObject::connect(
-         &practice_stopwatch_.periodic_update_timer,
-         &QTimer::timeout,
-         this,
-         qOverload< >(&MathFactsWidget::update));
+   QObject::connect(
+      &practice_stopwatch_.periodic_update_timer,
+      &QTimer::timeout,
+      this,
+      qOverload< >(&MathFactsWidget::update));
 
-      practice_stopwatch_.periodic_update_timer.start(
-         std::chrono::milliseconds { 500 });
+   practice_stopwatch_.periodic_update_timer.start(
+      std::chrono::milliseconds { 500 });
 
-      practice_stopwatch_.start_time =
-         std::chrono::steady_clock::now();
-      practice_stopwatch_.end_time =
-         practice_stopwatch_.start_time +
-         GetMathPracticeDuration();
-   }
+   practice_stopwatch_.start_time =
+      std::chrono::steady_clock::now();
+   practice_stopwatch_.end_time =
+      practice_stopwatch_.start_time +
+      GetMathPracticeDuration();
 }
 
 void MathFactsWidget::paintEvent(
@@ -431,7 +430,8 @@ MathFactsWidget::Problem MathFactsWidget::GenerateProblem( ) noexcept
 {
    if (randomizers_.addition_problems.empty() &&
        randomizers_.subtraction_problems.empty() &&
-       randomizers_.multiplication_problems.empty())
+       randomizers_.multiplication_problems.empty() &&
+       randomizers_.division_problems.empty())
    {
       if (TitleButtonID::ADD == chosen_problems_ ||
           TitleButtonID::ALL == chosen_problems_)
@@ -450,12 +450,19 @@ MathFactsWidget::Problem MathFactsWidget::GenerateProblem( ) noexcept
       {
          GenerateMultiplicationProblem();
       }
+
+      if (TitleButtonID::DIV == chosen_problems_ ||
+          TitleButtonID::ALL == chosen_problems_)
+      {
+         GenerateDivisionProblem();
+      }
    }
 
    std::vector< Problem > * const problems[] {
       &randomizers_.addition_problems,
       &randomizers_.subtraction_problems,
-      &randomizers_.multiplication_problems
+      &randomizers_.multiplication_problems,
+      &randomizers_.division_problems
    };
 
    uint32_t problem_type =
@@ -550,6 +557,29 @@ void MathFactsWidget::GenerateMultiplicationProblem( ) noexcept
    std::shuffle(
       randomizers_.multiplication_problems.begin(),
       randomizers_.multiplication_problems.end(),
+      std::default_random_engine {
+         randomizers_.random_engine });
+}
+
+void MathFactsWidget::GenerateDivisionProblem () noexcept
+{
+   for (int32_t denominator { 1 }; denominator <= 12; ++denominator)
+   {
+      for (int32_t answer { }; answer <= 12; ++answer)
+      {
+         randomizers_.division_problems.emplace_back(
+            Problem {
+               QString::number(denominator * answer),
+               "\u00F7  " + QString::number(denominator),
+               QString { },
+               answer
+            });
+      }
+   }
+
+   std::shuffle(
+      randomizers_.division_problems.begin(),
+      randomizers_.division_problems.end(),
       std::default_random_engine {
          randomizers_.random_engine });
 }
