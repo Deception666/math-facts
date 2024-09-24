@@ -122,6 +122,15 @@ private:
       MATH_PRACTICE
    };
 
+   enum EnabledMathFactBits : uint32_t
+   {
+      ADD = 0x01,
+      SUB = 0x02,
+      MUL = 0x04,
+      DIV = 0x08,
+      ALL = 0x0F
+   };
+
    void SetupColors( ) noexcept;
    void SetupAnswerImages( ) noexcept;
    void SetupStopwatchImages( ) noexcept;
@@ -137,6 +146,7 @@ private:
    void WriteReport( ) const noexcept;
 
    std::string GenerateReportName( ) const noexcept;
+   uint32_t GetEnabledMathFacts( ) const noexcept;
    std::filesystem::path GetReportsDirectory( ) const noexcept;
    std::chrono::milliseconds GetMathPracticeDuration( ) const noexcept;
    std::chrono::milliseconds CalculateStandardDeviationResponseTime( ) const noexcept;
@@ -374,6 +384,9 @@ void MathFactsWidget::SetupTitleStage( ) noexcept
 
    if (title_stage_buttons_)
    {
+      const uint32_t enabled_math_facts =
+         GetEnabledMathFacts();
+
       title_stage_buttons_->setParent(
          this);
 
@@ -382,14 +395,15 @@ void MathFactsWidget::SetupTitleStage( ) noexcept
          const char * const object_name;
          const char * const resource_id;
          TitleButtonID id;
+         EnabledMathFactBits enabled_math_fact_bit;
       };
 
       const ButtonSetup button_setup[] {
-         { "pushButtonAdd", ":/math-button-image-add", TitleButtonID::ADD },
-         { "pushButtonSub", ":/math-button-image-sub", TitleButtonID::SUB },
-         { "pushButtonMul", ":/math-button-image-mul", TitleButtonID::MUL },
-         { "pushButtonDiv", ":/math-button-image-div", TitleButtonID::DIV },
-         { "pushButtonAll", ":/math-buttons-image-sheet", TitleButtonID::ALL }
+         { "pushButtonAdd", ":/math-button-image-add", TitleButtonID::ADD, EnabledMathFactBits::ADD },
+         { "pushButtonSub", ":/math-button-image-sub", TitleButtonID::SUB, EnabledMathFactBits::SUB },
+         { "pushButtonMul", ":/math-button-image-mul", TitleButtonID::MUL, EnabledMathFactBits::MUL },
+         { "pushButtonDiv", ":/math-button-image-div", TitleButtonID::DIV, EnabledMathFactBits::DIV },
+         { "pushButtonAll", ":/math-buttons-image-sheet", TitleButtonID::ALL, EnabledMathFactBits::ALL }
       };
 
       for (const auto & button : button_setup)
@@ -422,6 +436,17 @@ void MathFactsWidget::SetupTitleStage( ) noexcept
                &MathFactsWidget::OnTitleButtonPressed,
                this,
                button.id));
+
+         if (button.id == TitleButtonID::ALL)
+         {
+            push_button->setEnabled(
+               enabled_math_facts != 0u);
+         }
+         else
+         {
+            push_button->setEnabled(
+               enabled_math_facts & button.enabled_math_fact_bit);
+         }
       }
    }
 }
@@ -433,26 +458,33 @@ MathFactsWidget::Problem MathFactsWidget::GenerateProblem( ) noexcept
        randomizers_.multiplication_problems.empty() &&
        randomizers_.division_problems.empty())
    {
-      if (TitleButtonID::ADD == chosen_problems_ ||
-          TitleButtonID::ALL == chosen_problems_)
+      const uint32_t enabled_math_facts =
+         GetEnabledMathFacts();
+
+      if (enabled_math_facts & EnabledMathFactBits::ADD &&
+         (TitleButtonID::ADD == chosen_problems_ ||
+          TitleButtonID::ALL == chosen_problems_))
       {
          GenerateAdditionProblem();
       }
 
-      if (TitleButtonID::SUB == chosen_problems_ ||
-          TitleButtonID::ALL == chosen_problems_)
+      if (enabled_math_facts & EnabledMathFactBits::SUB &&
+         (TitleButtonID::SUB == chosen_problems_ ||
+          TitleButtonID::ALL == chosen_problems_))
       {
          GenerateSubtractionProblem();
       }
 
-      if (TitleButtonID::MUL == chosen_problems_ ||
-          TitleButtonID::ALL == chosen_problems_)
+      if (enabled_math_facts & EnabledMathFactBits::MUL &&
+         (TitleButtonID::MUL == chosen_problems_ ||
+          TitleButtonID::ALL == chosen_problems_))
       {
          GenerateMultiplicationProblem();
       }
 
-      if (TitleButtonID::DIV == chosen_problems_ ||
-          TitleButtonID::ALL == chosen_problems_)
+      if (enabled_math_facts & EnabledMathFactBits::DIV &&
+         (TitleButtonID::DIV == chosen_problems_ ||
+          TitleButtonID::ALL == chosen_problems_))
       {
          GenerateDivisionProblem();
       }
@@ -870,6 +902,31 @@ std::string MathFactsWidget::GenerateReportName( ) const noexcept
       username +
       "-" +
       date_time;
+}
+
+uint32_t MathFactsWidget::GetEnabledMathFacts( ) const noexcept
+{
+   uint32_t enabled_math_facts {
+      EnabledMathFactBits::ADD |
+      EnabledMathFactBits::SUB |
+      EnabledMathFactBits::MUL |
+      EnabledMathFactBits::DIV
+   };
+
+   const QSettings settings {
+      "./math-facts.ini",
+      QSettings::Format::IniFormat
+   };
+
+   enabled_math_facts =
+      settings.value(
+         "enabled_math_facts",
+         enabled_math_facts).toString().toInt(
+            nullptr,
+            16);
+
+   return
+      enabled_math_facts;
 }
 
 std::filesystem::path MathFactsWidget::GetReportsDirectory( ) const noexcept
