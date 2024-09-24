@@ -425,7 +425,7 @@ void MathFactsWidget::SetupTitleStage( ) noexcept
                   image: url(%1); \
                } \
                QPushButton:hover:!pressed { \
-                  background-color: rgba(255,255,255,127); \
+                  background-color: rgba(172,255,126,255); \
                }"
             }.arg(button.resource_id));
 
