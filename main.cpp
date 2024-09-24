@@ -381,20 +381,16 @@ void MathFactsWidget::SetupTitleStage( ) noexcept
       struct ButtonSetup
       {
          const char * const object_name;
-         QRect image_sheet_rect;
+         const char * const resource_id;
          TitleButtonID id;
       };
 
-      const QPixmap math_buttons_image_sheet {
-         ":/math-buttons-image-sheet"
-      };
-
       const ButtonSetup button_setup[] {
-         { "pushButtonAdd", { 0, 0, 141, 143 }, TitleButtonID::ADD },
-         { "pushButtonSub", { 142, 0, 141, 143 }, TitleButtonID::SUB },
-         { "pushButtonMul", { 284, 0, 141, 143 }, TitleButtonID::MUL },
-         { "pushButtonDiv", { 428, 0, 141, 143 }, TitleButtonID::DIV },
-         { "pushButtonAll", math_buttons_image_sheet.rect(), TitleButtonID::ALL }
+         { "pushButtonAdd", ":/math-button-image-add", TitleButtonID::ADD },
+         { "pushButtonSub", ":/math-button-image-sub", TitleButtonID::SUB },
+         { "pushButtonMul", ":/math-button-image-mul", TitleButtonID::MUL },
+         { "pushButtonDiv", ":/math-button-image-div", TitleButtonID::DIV },
+         { "pushButtonAll", ":/math-buttons-image-sheet", TitleButtonID::ALL }
       };
 
       for (const auto & button : button_setup)
@@ -404,16 +400,21 @@ void MathFactsWidget::SetupTitleStage( ) noexcept
                button.object_name,
                Qt::FindChildOption::FindChildrenRecursively);
 
-         QPixmap button_image =
-            math_buttons_image_sheet.copy(
-               button.image_sheet_rect);
-
-         push_button->setIcon(
-            QIcon { button_image });
-         push_button->setIconSize(
-            QSize { 
-               math_buttons_image_sheet.width() / 2,
-               math_buttons_image_sheet.height() / 2 });
+         push_button->setStyleSheet(
+            QString {
+               "QPushButton { \
+                  background-color: rgba(0,0,0,0); \
+                  border-style: outset; \
+                  border-width: 2px; \
+                  border-radius: 10px; \
+                  border-color: beige; \
+                  padding: 1px; \
+                  image: url(%1); \
+               } \
+               QPushButton:hover:!pressed { \
+                  background-color: rgba(255,255,255,127); \
+               }"
+            }.arg(button.resource_id));
 
          QObject::connect(
             push_button,

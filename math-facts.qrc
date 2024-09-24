@@ -5,6 +5,10 @@
       <file alias="wrong-answer-image">wrong-answer.png</file>
       <file alias="math-facts-title-image">math-facts-title.png</file>
       <file alias="math-buttons-image-sheet">math-buttons-image-sheet.png</file>
+      <file alias="math-button-image-add">math-button-image-add.png</file>
+      <file alias="math-button-image-sub">math-button-image-sub.png</file>
+      <file alias="math-button-image-mul">math-button-image-mul.png</file>
+      <file alias="math-button-image-div">math-button-image-div.png</file>
       <file alias="title-stage-buttons-ui">title-stage-buttons.ui</file>
       <file alias="stopwatch-base-image">stopwatch-base.png</file>
       <file alias="stopwatch-hand-image">stopwatch-hand.png</file>
