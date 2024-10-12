@@ -31,10 +31,6 @@ add_executable(
    math-facts.qrc
    math-facts.rc)
 
-set(
-   qt_version_major
-   5)
-
 find_package(
    Qt5
    QUIET
@@ -54,10 +50,11 @@ if (NOT QT5_FOUND)
          Widgets
          UiTools)
 
-   set(
-      qt_version_major
-      6)
 endif ( )
+
+set(
+   qt_version_major
+   ${Qt5_VERSION_MAJOR}${Qt6_VERSION_MAJOR})
 
 target_link_libraries(
    ${target_name}
@@ -84,3 +81,39 @@ set_target_properties(
    ${target_name}
    PROPERTIES
       VS_DEBUGGER_ENVIRONMENT "${vs_debugger_environment_gexpr}")
+
+install(
+   TARGETS
+      ${target_name}
+   RUNTIME_DEPENDENCY_SET "Qt")
+
+install(
+   FILES
+      math-facts.ini
+   DESTINATION
+      "${CMAKE_INSTALL_BINDIR}")
+
+string(
+   CONCAT
+   qt_core_import_directory_absolute
+   "$<PATH:GET_PARENT_PATH,"
+      "$<TARGET_PROPERTY:"
+         "Qt${qt_version_major}::Core,"
+         "IMPORTED_LOCATION$<UPPER_CASE:_$<CONFIG>>"
+      ">"
+   ">")
+
+install(
+   RUNTIME_DEPENDENCY_SET "Qt"
+   PRE_EXCLUDE_REGEXES
+      "api-ms-"
+      "ext-ms-"
+   POST_EXCLUDE_REGEXES
+      ".*system32/.*\\.dll"
+   DIRECTORIES
+      "${qt_core_import_directory_absolute}")
+
+install(
+   DIRECTORY
+      "${qt_core_import_directory_absolute}/../Qt6"
+   DESTINATION "${CMAKE_INSTALL_BINDIR}")
