@@ -32,7 +32,7 @@ add_executable(
    math-facts.rc)
 
 find_package(
-   Qt5
+   Qt6
    QUIET
    COMPONENTS
       Core
@@ -40,9 +40,10 @@ find_package(
       Widgets
       UiTools)
 
-if (NOT QT5_FOUND)
+if (NOT Qt6_FOUND)
+
    find_package(
-      Qt6
+      Qt5
       REQUIRED
       COMPONENTS
          Core
@@ -82,6 +83,8 @@ set_target_properties(
    PROPERTIES
       VS_DEBUGGER_ENVIRONMENT "${vs_debugger_environment_gexpr}")
 
+include(GNUInstallDirs)
+
 install(
    TARGETS
       ${target_name}
@@ -93,27 +96,31 @@ install(
    DESTINATION
       "${CMAKE_INSTALL_BINDIR}")
 
-string(
-   CONCAT
-   qt_core_import_directory_absolute
-   "$<PATH:GET_PARENT_PATH,"
-      "$<TARGET_PROPERTY:"
-         "Qt${qt_version_major}::Core,"
-         "IMPORTED_LOCATION$<UPPER_CASE:_$<CONFIG>>"
-      ">"
-   ">")
+if (WIN32)
 
-install(
-   RUNTIME_DEPENDENCY_SET "Qt"
-   PRE_EXCLUDE_REGEXES
-      "api-ms-"
-      "ext-ms-"
-   POST_EXCLUDE_REGEXES
-      ".*system32/.*\\.dll"
-   DIRECTORIES
-      "${qt_core_import_directory_absolute}")
+   string(
+      CONCAT
+      qt_core_import_directory_absolute
+      "$<PATH:GET_PARENT_PATH,"
+         "$<TARGET_PROPERTY:"
+            "Qt${qt_version_major}::Core,"
+            "IMPORTED_LOCATION$<UPPER_CASE:_$<CONFIG>>"
+         ">"
+      ">")
 
-install(
-   DIRECTORY
-      "${qt_core_import_directory_absolute}/../Qt6"
-   DESTINATION "${CMAKE_INSTALL_BINDIR}")
+   install(
+      RUNTIME_DEPENDENCY_SET "Qt"
+      PRE_EXCLUDE_REGEXES
+         "api-ms-"
+         "ext-ms-"
+      POST_EXCLUDE_REGEXES
+         ".*system32/.*\\.dll"
+      DIRECTORIES
+         "${qt_core_import_directory_absolute}")
+
+   install(
+      DIRECTORY
+         "${qt_core_import_directory_absolute}/../Qt6"
+      DESTINATION "${CMAKE_INSTALL_BINDIR}")
+
+endif ( )

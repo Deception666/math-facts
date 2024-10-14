@@ -30,11 +30,17 @@
 #include <cstdint>
 #include <cstdlib>
 #include <filesystem>
-#include <format>
 #include <fstream>
 #include <functional>
 #include <memory>
 #include <random>
+
+#if __has_include(<format>)
+#  include <format>
+#else
+#  include <ctime>
+#  include <time.h>
+#endif // __has_include(<format>)
 
 class MathFactsWidget :
    public QWidget
@@ -292,7 +298,7 @@ void MathFactsWidget::keyReleaseEvent(
       break;
 
    case Qt::Key::Key_Enter:
-      [[fall_through]];
+      // [[fall_through]];
 
    case Qt::Key::Key_Return:
       GradeAnswer();
@@ -891,12 +897,44 @@ std::string MathFactsWidget::GenerateReportName( ) const noexcept
 #  error "Define for this platform!"
 #endif
 
+#if __has_include(<format>)
    // may throw but lets assume not
    const std::string date_time =
       std::format(
          "{:%F-%H.%M.%OS}",
          std::chrono::current_zone()->to_local(
             std::chrono::system_clock::now()));
+#else
+   const auto sys_time_now =
+      std::chrono::system_clock::to_time_t(
+         std::chrono::system_clock::now());
+
+   std::string date_time;
+   date_time.resize(512);
+
+   std::tm local_time_now;
+
+   // assume no failures for both
+#ifdef _WIN32
+   localtime_s(
+      &local_time_now,
+      &sys_time_now);
+#else
+   localtime_r(
+      &sys_time_now,
+      &local_time_now);
+#endif // _WIN32
+
+   const size_t bytes_written =
+      std::strftime(
+         date_time.data(),
+         date_time.size(),
+         "%F-%H.%M.%S",
+         &local_time_now);
+
+   date_time.resize(
+      bytes_written);
+#endif // __has_include(<format>)
 
    return
       username +
@@ -914,7 +952,7 @@ uint32_t MathFactsWidget::GetEnabledMathFacts( ) const noexcept
    };
 
    const QSettings settings {
-      "./math-facts.ini",
+      QApplication::applicationDirPath() + "/math-facts.ini",
       QSettings::Format::IniFormat
    };
 
@@ -934,7 +972,7 @@ std::filesystem::path MathFactsWidget::GetReportsDirectory( ) const noexcept
    std::string directory { "../math-facts-reports/" };
 
    const QSettings settings {
-      "./math-facts.ini",
+      QApplication::applicationDirPath() + "/math-facts.ini",
       QSettings::Format::IniFormat
    };
 
@@ -954,7 +992,7 @@ std::chrono::milliseconds MathFactsWidget::GetMathPracticeDuration( ) const noex
    int32_t duration { 300000 };
 
    const QSettings settings {
-      "./math-facts.ini",
+      QApplication::applicationDirPath() + "/math-facts.ini",
       QSettings::Format::IniFormat
    };
 
@@ -1110,7 +1148,11 @@ void MathFactsWidget::PaintProblemText(
       true);
 
    const QFont font {
+   #if _WIN32
       "Comic Sans MS",
+   #else
+      "Noto Sans Mono",
+   #endif
       200
    };
 
