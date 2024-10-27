@@ -151,7 +151,9 @@ private:
    void GradeAnswer( ) noexcept;
    void WriteReport( ) const noexcept;
 
+   std::string GetCurrentUserName( ) const noexcept;
    std::string GenerateReportName( ) const noexcept;
+   std::unique_ptr< QSettings > GetSettings( ) const noexcept;
    uint32_t GetEnabledMathFacts( ) const noexcept;
    std::filesystem::path GetReportsDirectory( ) const noexcept;
    std::chrono::milliseconds GetMathPracticeDuration( ) const noexcept;
@@ -886,16 +888,23 @@ void MathFactsWidget::WriteReport( ) const noexcept
    }
 }
 
-std::string MathFactsWidget::GenerateReportName( ) const noexcept
+std::string MathFactsWidget::GetCurrentUserName( ) const noexcept
 {
-   const std::string username =
 #if _WIN32
+   return
       std::getenv("USERNAME");
 #elif __linux__ || __unix__
+   return
       std::getenv("USER");
 #else
 #  error "Define for this platform!"
 #endif
+}
+
+std::string MathFactsWidget::GenerateReportName( ) const noexcept
+{
+   const std::string username =
+      GetCurrentUserName();
 
 #if __has_include(<format>)
    // may throw but lets assume not
@@ -942,6 +951,77 @@ std::string MathFactsWidget::GenerateReportName( ) const noexcept
       date_time;
 }
 
+std::unique_ptr< QSettings > MathFactsWidget::GetSettings( ) const noexcept
+{
+   std::unique_ptr< QSettings > settings;
+
+   const std::string username =
+      GetCurrentUserName();
+
+   const std::filesystem::path application_dir_path =
+      QApplication::applicationDirPath().toStdString();
+
+#if _MSC_VER
+
+   const std::filesystem::path current_working_dir_path =
+      std::filesystem::current_path();
+
+   if (const auto settings_path =
+          current_working_dir_path / (username + "-math-facts.ini");
+       std::filesystem::is_regular_file(settings_path))
+   {
+      settings =
+         std::make_unique< QSettings >(
+            QString::fromStdString(
+               settings_path.string()),
+            QSettings::Format::IniFormat);
+   }
+   else if (const auto settings_path =
+               current_working_dir_path / ("math-facts.ini");
+            std::filesystem::is_regular_file(settings_path))
+   {
+      settings =
+         std::make_unique< QSettings >(
+            QString::fromStdString(
+               settings_path.string()),
+            QSettings::Format::IniFormat);
+   }
+   else
+   
+#endif // _MSC_VER
+
+   if (const auto settings_path =
+          application_dir_path / (username + "-math-facts.ini");
+      std::filesystem::is_regular_file(settings_path))
+   {
+      settings =
+         std::make_unique< QSettings >(
+            QString::fromStdString(
+               settings_path.string()),
+            QSettings::Format::IniFormat);
+   }
+   else if (const auto settings_path =
+               application_dir_path / (username + "-math-facts.ini");
+            std::filesystem::is_regular_file(settings_path))
+   {
+      settings =
+         std::make_unique< QSettings >(
+            QString::fromStdString(
+               settings_path.string()),
+            QSettings::Format::IniFormat);
+   }
+   else
+   {
+      settings =
+         std::make_unique< QSettings >(
+            "math-facts.ini",
+            QSettings::Format::IniFormat);
+   }
+
+   return
+      settings;
+}
+
 uint32_t MathFactsWidget::GetEnabledMathFacts( ) const noexcept
 {
    uint32_t enabled_math_facts {
@@ -951,13 +1031,11 @@ uint32_t MathFactsWidget::GetEnabledMathFacts( ) const noexcept
       EnabledMathFactBits::DIV
    };
 
-   const QSettings settings {
-      QApplication::applicationDirPath() + "/math-facts.ini",
-      QSettings::Format::IniFormat
-   };
+   const auto settings =
+      GetSettings();
 
    enabled_math_facts =
-      settings.value(
+      settings->value(
          "enabled_math_facts",
          enabled_math_facts).toString().toInt(
             nullptr,
@@ -971,13 +1049,11 @@ std::filesystem::path MathFactsWidget::GetReportsDirectory( ) const noexcept
 {
    std::string directory { "../math-facts-reports/" };
 
-   const QSettings settings {
-      QApplication::applicationDirPath() + "/math-facts.ini",
-      QSettings::Format::IniFormat
-   };
+   const auto settings =
+      GetSettings();
 
    directory =
-      settings.value(
+      settings->value(
          "reports_directory",
          QString::fromStdString(directory))
             .toString()
@@ -991,13 +1067,11 @@ std::chrono::milliseconds MathFactsWidget::GetMathPracticeDuration( ) const noex
 {
    int32_t duration { 300000 };
 
-   const QSettings settings {
-      QApplication::applicationDirPath() + "/math-facts.ini",
-      QSettings::Format::IniFormat
-   };
+   const auto settings =
+      GetSettings();
 
    duration =
-      settings.value(
+      settings->value(
          "math_practice_duration_ms",
          duration).toInt();
 
