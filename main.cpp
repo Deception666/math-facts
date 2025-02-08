@@ -632,6 +632,9 @@ void MathFactsWidget::GenerateDivisionProblem () noexcept
 
 void MathFactsWidget::GradeAnswer( ) noexcept
 {
+   if (current_problem_.line3.isEmpty())
+      return;
+
    const int32_t response =
       current_problem_.line3.toInt();
 
