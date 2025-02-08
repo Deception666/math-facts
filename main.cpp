@@ -158,6 +158,7 @@ private:
    std::filesystem::path GetReportsDirectory( ) const noexcept;
    std::chrono::milliseconds GetMathPracticeDuration( ) const noexcept;
    std::chrono::milliseconds CalculateStandardDeviationResponseTime( ) const noexcept;
+   uint32_t GetMinimumAmountToPractice( ) const noexcept;
 
    void PaintProblem(
       QPaintEvent * paint_event ) noexcept;
@@ -189,6 +190,7 @@ private:
    QPixmap correct_answer_image_;
 
    Stopwatch practice_stopwatch_;
+   uint32_t minimum_amount_to_practice_;
 
 };
 
@@ -199,7 +201,8 @@ current_stage_ { Stage::TITLE },
 chosen_problems_ { },
 title_stage_buttons_ { nullptr },
 current_colors_ { nullptr },
-answer_image_ { nullptr }
+answer_image_ { nullptr },
+minimum_amount_to_practice_ { 50 }
 {
    SetupColors();
    SetupAnswerImages();
@@ -238,6 +241,9 @@ void MathFactsWidget::OnTitleButtonPressed(
 
    practice_stopwatch_.periodic_update_timer.start(
       std::chrono::milliseconds { 500 });
+
+   minimum_amount_to_practice_ =
+      GetMinimumAmountToPractice();
 
    practice_stopwatch_.start_time =
       std::chrono::steady_clock::now();
@@ -1136,10 +1142,32 @@ std::chrono::milliseconds MathFactsWidget::CalculateStandardDeviationResponseTim
       standard_deviation;
 }
 
+uint32_t MathFactsWidget::GetMinimumAmountToPractice( ) const noexcept
+{
+   int32_t minimum { 50 };
+
+   const auto settings =
+      GetSettings();
+
+   minimum =
+      settings->value(
+         "minimum_amount_to_practice",
+         minimum).toInt();
+
+   if (minimum <= 0)
+   {
+      minimum = 50;
+   }
+
+   return
+      minimum;
+}
+
 void MathFactsWidget::PaintProblem(
    QPaintEvent * paint_event ) noexcept
 {
-   if (!practice_stopwatch_.PracticeTimeExceeded())
+   if (!practice_stopwatch_.PracticeTimeExceeded() ||
+       answered_problems_.size() < minimum_amount_to_practice_)
    {
       PaintBackground(
          paint_event);
@@ -1406,7 +1434,9 @@ void MathFactsWidget::PaintStopwatch(
       std::chrono::steady_clock::now();
 
    const qreal hand_rotation =
-      remaining_time.count() * 360.0 / total_time.count();
+      remaining_time.count() >= 0 ?
+         remaining_time.count() * 360.0 / total_time.count() :
+         0.0;
 
    stopwatch_painter.translate(
       256.0,
