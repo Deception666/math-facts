@@ -29,7 +29,9 @@ add_executable(
    mainicon.ico
    math-facts.ini
    math-facts.qrc
-   math-facts.rc)
+   math-facts.rc
+   math-facts-widget.cpp
+   math-facts-widget.hpp)
 
 find_package(
    Qt6
