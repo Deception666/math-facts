@@ -1,4 +1,6 @@
 #include "math-facts-widget.hpp"
+#include "arithmetic-problem.hpp"
+#include "problem.hpp"
 
 #include <QtCore/QFile>
 #include <QtCore/QObject>
@@ -8,6 +10,7 @@
 #include <QtCore/QRectF>
 #include <QtCore/QSettings>
 #include <QtCore/QSize>
+#include <QtCore/QString>
 #include <QtCore/Qt>
 #include <QtCore/QtTypes>
 #include <QtGui/QBrush>
@@ -54,6 +57,10 @@ minimum_amount_to_practice_ { 50 }
    SetupTitleStage();
 }
 
+MathFactsWidget::~MathFactsWidget( ) noexcept
+{
+}
+
 void MathFactsWidget::OnAnswerImageTimeout( ) noexcept
 {
    answer_image_ = nullptr;
@@ -74,6 +81,9 @@ void MathFactsWidget::OnTitleButtonPressed(
 
    current_problem_ =
       GenerateProblem();
+
+   current_problem_->SetTextColor(
+      current_colors_->text);
 
    update();
 
@@ -117,45 +127,52 @@ void MathFactsWidget::paintEvent(
 void MathFactsWidget::keyReleaseEvent(
    QKeyEvent * event )
 {
-   const auto AppendChar =
-      [ this ] (
-         const char c )
-      {
-         if (current_problem_.line3.size() < 3)
-         {
-            current_problem_.line3 += c;
-         }
-      };
+   //const auto AppendChar =
+   //   [ this ] (
+   //      const char c )
+   //   {
+   //      if (current_problem_.line3.size() < 3)
+   //      {
+   //         current_problem_.line3 += c;
+   //      }
+   //   };
 
-   switch (event->key())
+   //switch (event->key())
+   //{
+   //case Qt::Key::Key_0: AppendChar('0'); break;
+   //case Qt::Key::Key_1: AppendChar('1'); break;
+   //case Qt::Key::Key_2: AppendChar('2'); break;
+   //case Qt::Key::Key_3: AppendChar('3'); break;
+   //case Qt::Key::Key_4: AppendChar('4'); break;
+   //case Qt::Key::Key_5: AppendChar('5'); break;
+   //case Qt::Key::Key_6: AppendChar('6'); break;
+   //case Qt::Key::Key_7: AppendChar('7'); break;
+   //case Qt::Key::Key_8: AppendChar('8'); break;
+   //case Qt::Key::Key_9: AppendChar('9'); break;
+
+   //case Qt::Key::Key_Backspace:
+   //   if (current_problem_.line3.size())
+   //   {
+   //      current_problem_.line3.resize(
+   //         current_problem_.line3.size() - 1);
+   //   }
+   //   
+   //   break;
+
+   //case Qt::Key::Key_Enter:
+   //   // [[fall_through]];
+
+   //case Qt::Key::Key_Return:
+   //   GradeAnswer();
+
+   //   break;
+   //}
+
+   if (current_problem_)
    {
-   case Qt::Key::Key_0: AppendChar('0'); break;
-   case Qt::Key::Key_1: AppendChar('1'); break;
-   case Qt::Key::Key_2: AppendChar('2'); break;
-   case Qt::Key::Key_3: AppendChar('3'); break;
-   case Qt::Key::Key_4: AppendChar('4'); break;
-   case Qt::Key::Key_5: AppendChar('5'); break;
-   case Qt::Key::Key_6: AppendChar('6'); break;
-   case Qt::Key::Key_7: AppendChar('7'); break;
-   case Qt::Key::Key_8: AppendChar('8'); break;
-   case Qt::Key::Key_9: AppendChar('9'); break;
-
-   case Qt::Key::Key_Backspace:
-      if (current_problem_.line3.size())
-      {
-         current_problem_.line3.resize(
-            current_problem_.line3.size() - 1);
-      }
-      
-      break;
-
-   case Qt::Key::Key_Enter:
-      // [[fall_through]];
-
-   case Qt::Key::Key_Return:
-      GradeAnswer();
-
-      break;
+      current_problem_->OnKeyReleaseEvent(
+         event,
+         *this);
    }
 
    update();
@@ -309,7 +326,7 @@ void MathFactsWidget::SetupTitleStage( ) noexcept
    }
 }
 
-MathFactsWidget::Problem MathFactsWidget::GenerateProblem( ) noexcept
+std::unique_ptr< Problem > MathFactsWidget::GenerateProblem( ) noexcept
 {
    if (randomizers_.addition_problems.empty() &&
        randomizers_.subtraction_problems.empty() &&
@@ -348,7 +365,7 @@ MathFactsWidget::Problem MathFactsWidget::GenerateProblem( ) noexcept
       }
    }
 
-   std::vector< Problem > * const problems[] {
+   std::vector< std::unique_ptr< Problem > > * const problems[] {
       &randomizers_.addition_problems,
       &randomizers_.subtraction_problems,
       &randomizers_.multiplication_problems,
@@ -366,14 +383,14 @@ MathFactsWidget::Problem MathFactsWidget::GenerateProblem( ) noexcept
             randomizers_.random_engine);
    }
 
-   Problem problem {
+   std::unique_ptr< Problem > problem {
       std::move(problems[problem_type]->back())
    };
 
    problems[problem_type]->pop_back();
 
-   problem.start =
-      std::chrono::steady_clock::now();
+//   problem.start =
+//      std::chrono::steady_clock::now();
 
    return
       problem;
@@ -386,12 +403,16 @@ void MathFactsWidget::GenerateAdditionProblem( ) noexcept
       for (int32_t bottom { }; bottom <= 12; ++bottom)
       {
          randomizers_.addition_problems.emplace_back(
-            Problem {
-               QString::number(top),
-               "+  " + QString::number(bottom),
-               QString { },
-               top + bottom
-            });
+            std::make_unique< ArithmeticProblem >(
+               top,
+               bottom,
+               ArithmeticProblem::Operation::ADD));
+
+         QObject::connect(
+            randomizers_.addition_problems.back().get(),
+            &Problem::Answered,
+            this,
+            &MathFactsWidget::OnProblemAnswered);
       }
    }
 
@@ -411,12 +432,16 @@ void MathFactsWidget::GenerateSubtractionProblem( ) noexcept
          if (top >= bottom)
          {
             randomizers_.subtraction_problems.emplace_back(
-               Problem {
-                  QString::number(top),
-                  "-  " + QString::number(bottom),
-                  QString { },
-                  top - bottom
-               });
+               std::make_unique< ArithmeticProblem >(
+                  top,
+                  bottom,
+                  ArithmeticProblem::Operation::ADD));
+
+            QObject::connect(
+               randomizers_.subtraction_problems.back().get(),
+               &Problem::Answered,
+               this,
+               &MathFactsWidget::OnProblemAnswered);
          }
       }
    }
@@ -435,12 +460,16 @@ void MathFactsWidget::GenerateMultiplicationProblem( ) noexcept
       for (int32_t bottom { }; bottom <= 12; ++bottom)
       {
          randomizers_.multiplication_problems.emplace_back(
-            Problem {
-               QString::number(top),
-               "x  " + QString::number(bottom),
-               QString { },
-               top * bottom
-            });
+            std::make_unique< ArithmeticProblem >(
+               top,
+               bottom,
+               ArithmeticProblem::Operation::MUL));
+
+         QObject::connect(
+            randomizers_.multiplication_problems.back().get(),
+            &Problem::Answered,
+            this,
+            &MathFactsWidget::OnProblemAnswered);
       }
    }
 
@@ -458,12 +487,16 @@ void MathFactsWidget::GenerateDivisionProblem () noexcept
       for (int32_t answer { }; answer <= 12; ++answer)
       {
          randomizers_.division_problems.emplace_back(
-            Problem {
-               QString::number(denominator * answer),
-               "\u00F7  " + QString::number(denominator),
-               QString { },
-               answer
-            });
+            std::make_unique< ArithmeticProblem >(
+               denominator * answer,
+               denominator,
+               ArithmeticProblem::Operation::DIV));
+
+         QObject::connect(
+            randomizers_.division_problems.back().get(),
+            &Problem::Answered,
+            this,
+            &MathFactsWidget::OnProblemAnswered);
       }
    }
 
@@ -474,21 +507,22 @@ void MathFactsWidget::GenerateDivisionProblem () noexcept
          randomizers_.random_engine });
 }
 
-void MathFactsWidget::GradeAnswer( ) noexcept
+void MathFactsWidget::OnProblemAnswered(
+   const AnswerResult result ) noexcept
 {
-   if (current_problem_.line3.isEmpty())
-      return;
+//   if (current_problem_.line3.isEmpty())
+//      return;
+//
+//   const int32_t response =
+//      current_problem_.line3.toInt();
+//
+//   current_problem_.responses.push_back(
+//      response);
 
-   const int32_t response =
-      current_problem_.line3.toInt();
-
-   current_problem_.responses.push_back(
-      response);
-
-   if (response == current_problem_.answer)
+   if (result == AnswerResult::CORRECT)
    {
-      current_problem_.end =
-         std::chrono::steady_clock::now();
+//      current_problem_.end =
+//         std::chrono::steady_clock::now();
 
       answered_problems_.emplace_back(
          std::move(current_problem_));
@@ -504,11 +538,14 @@ void MathFactsWidget::GradeAnswer( ) noexcept
       current_colors_ =
          &colors_[new_colors_index];
 
+      current_problem_->SetTextColor(
+         current_colors_->text);
+
       answer_image_ = &correct_answer_image_;
    }
    else
    {
-      current_problem_.line3.clear();
+//      current_problem_.line3.clear();
 
       answer_image_ = &wrong_answer_image_;
    }
@@ -597,18 +634,18 @@ void MathFactsWidget::WriteReport( ) const noexcept
 
          for (const auto & answer : answered_problems_)
          {
-            average_response_time +=
-               std::chrono::duration_cast<
-                  std::chrono::milliseconds >(
-                     answer.end - answer.start);
-
-            answered_problems_for_sort.push_back(
-               &answer);
-
-            if (answer.responses.size() == 1)
-            {
-               ++percentage_answers_correct;
-            }
+//            average_response_time +=
+//               std::chrono::duration_cast<
+//                  std::chrono::milliseconds >(
+//                     answer.end - answer.start);
+//
+//            answered_problems_for_sort.push_back(
+//               &answer);
+//
+//            if (answer.responses.size() == 1)
+//            {
+//               ++percentage_answers_correct;
+//            }
          }
 
          if (!answered_problems_.empty())
@@ -646,44 +683,44 @@ void MathFactsWidget::WriteReport( ) const noexcept
             [ & ] (
                const Problem & answer )
             {
-               const auto response_time =
-                  std::chrono::duration_cast<
-                     std::chrono::milliseconds >(
-                        answer.end - answer.start);
-
-               report_file
-                  << answer.line1.toStdString()
-                  << answer.line2.toStdString()
-                  << " = "
-                  << answer.line3.toStdString()
-                  << "; response time ms = "
-                  << response_time
-                  << "; responses = ";
-
-               for (const auto & response : answer.responses)
-               {
-                  report_file
-                     << response
-                     << "   ";
-               }
-
-               report_file << "\n";
+//               const auto response_time =
+//                  std::chrono::duration_cast<
+//                     std::chrono::milliseconds >(
+//                        answer.end - answer.start);
+//
+//               report_file
+//                  << answer.line1.toStdString()
+//                  << answer.line2.toStdString()
+//                  << " = "
+//                  << answer.line3.toStdString()
+//                  << "; response time ms = "
+//                  << response_time
+//                  << "; responses = ";
+//
+//               for (const auto & response : answer.responses)
+//               {
+//                  report_file
+//                     << response
+//                     << "   ";
+//               }
+//
+//               report_file << "\n";
             };
 
          report_file
             << "\ntop ten most responses\n";
 
-         std::sort(
-            answered_problems_for_sort.begin(),
-            answered_problems_for_sort.end(),
-            [ ] (
-               const Problem * const l,
-               const Problem * const r )
-            {
-               return
-                  r->responses.size() <
-                  l->responses.size();
-            });
+//         std::sort(
+//            answered_problems_for_sort.begin(),
+//            answered_problems_for_sort.end(),
+//            [ ] (
+//               const Problem * const l,
+//               const Problem * const r )
+//            {
+//               return
+//                  r->responses.size() <
+//                  l->responses.size();
+//            });
 
          std::for_each(
             answered_problems_for_sort.begin(),
@@ -700,22 +737,22 @@ void MathFactsWidget::WriteReport( ) const noexcept
          report_file
             << "\ntop ten longest responses\n";
 
-         std::sort(
-            answered_problems_for_sort.begin(),
-            answered_problems_for_sort.end(),
-            [ ] (
-               const Problem * const l,
-               const Problem * const r )
-            {
-               const auto response_time_l =
-                  l->end - l->start;
-               const auto response_time_r =
-                  r->end - r->start;
-
-               return
-                  response_time_r <
-                  response_time_l;
-            });
+//         std::sort(
+//            answered_problems_for_sort.begin(),
+//            answered_problems_for_sort.end(),
+//            [ ] (
+//               const Problem * const l,
+//               const Problem * const r )
+//            {
+//               const auto response_time_l =
+//                  l->end - l->start;
+//               const auto response_time_r =
+//                  r->end - r->start;
+//
+//               return
+//                  response_time_r <
+//                  response_time_l;
+//            });
 
          std::for_each(
             answered_problems_for_sort.begin(),
@@ -734,8 +771,8 @@ void MathFactsWidget::WriteReport( ) const noexcept
 
          for (const auto & answer : answered_problems_)
          {
-            PrintAnswer(
-               answer);
+//            PrintAnswer(
+//               answer);
          }
       }
    }
@@ -949,10 +986,10 @@ std::chrono::milliseconds MathFactsWidget::CalculateStandardDeviationResponseTim
 
       for (const auto & answer : answered_problems_)
       {
-         average_response_time +=
-            std::chrono::duration_cast<
-               std::chrono::milliseconds >(
-                  answer.end - answer.start);
+//         average_response_time +=
+//            std::chrono::duration_cast<
+//               std::chrono::milliseconds >(
+//                  answer.end - answer.start);
       }
       
       average_response_time /= answered_problems_.size();
@@ -961,17 +998,17 @@ std::chrono::milliseconds MathFactsWidget::CalculateStandardDeviationResponseTim
 
       for (const auto & answer : answered_problems_)
       {
-         const auto deviation_from_mean =
-            (std::chrono::duration_cast<
-               std::chrono::milliseconds >(
-                  answer.end - answer.start) -
-             average_response_time).count();
-
-         const auto deviation_from_mean_squared =
-            deviation_from_mean * deviation_from_mean;
-
-         sum_of_squares +=
-            deviation_from_mean_squared;
+//         const auto deviation_from_mean =
+//            (std::chrono::duration_cast<
+//               std::chrono::milliseconds >(
+//                  answer.end - answer.start) -
+//             average_response_time).count();
+//
+//         const auto deviation_from_mean_squared =
+//            deviation_from_mean * deviation_from_mean;
+//
+//         sum_of_squares +=
+//            deviation_from_mean_squared;
       }
 
       const auto variance =
@@ -1077,161 +1114,168 @@ void MathFactsWidget::PaintBackground(
 void MathFactsWidget::PaintProblemText(
    QPaintEvent * paint_event ) noexcept
 {
-   // pixmap is at pixel ratio of 1.0
-   QPixmap text_pixmap {
-      2048, 2048
-   };
-
-   text_pixmap.fill(
-      QColor { 0, 0, 0, 0 });
-
-   QPainter text_painter {
-      &text_pixmap
-   };
-
-   text_painter.setRenderHint(
-      QPainter::RenderHint::Antialiasing,
-      true);
-   text_painter.setRenderHint(
-      QPainter::RenderHint::TextAntialiasing,
-      true);
-
-   const QFont font {
-   #if _WIN32
-      "Comic Sans MS",
-   #else
-      "Noto Sans Mono",
-   #endif
-      200
-   };
-
-   text_painter.setFont(
-      font);
-
-   // set the line thickness
-   // set the color of line and font
-   text_painter.setPen(
-      QPen {
-         QBrush { current_colors_->text },
-         10.0
-      });
-
-   const QFontMetrics font_metrics {
-      text_painter.font()
-   };
-
-   // problem two is always the longest line
-   const QRect text_bounding_rect =
-      font_metrics.tightBoundingRect(
-         current_problem_.line2);
-
-   // add a bit of space between the lines
-   const int32_t line_space_gap { 10 };
-   const int32_t line_height =
-      text_bounding_rect.height() +
-      line_space_gap;
-
-   text_painter.drawText(
-      QRect { 0, 0, text_pixmap.width(), text_pixmap.height() },
-      current_problem_.line1,
-      QTextOption { Qt::AlignmentFlag::AlignRight });
-
-   QRect line2_bounding_box;
-   
-   text_painter.drawText(
-      QRect { 0, line_height, text_pixmap.width(), text_pixmap.height() },
-      Qt::AlignmentFlag::AlignRight,
-      current_problem_.line2,
-      &line2_bounding_box);
-
-   text_painter.drawText(
-      QRect { 0, line_height * 2 + 40, text_pixmap.width(), text_pixmap.height() },
-      current_problem_.line3,
-      QTextOption { Qt::AlignmentFlag::AlignRight });
-
-   const int32_t answer_line_width =
-      text_bounding_rect.width();
-   const qreal answer_line_y =
-      line_height * 2 + 40 +
-      (font_metrics.ascent() - text_bounding_rect.height()) / 1.25;
-
-   // draw the answer line
-   text_painter.drawLine(
-      QPointF {
-         static_cast< qreal >(text_pixmap.width()),
-         answer_line_y },
-      QPointF {
-         static_cast< qreal >(text_pixmap.width() - answer_line_width),
-         answer_line_y });
-
-   // aspect of the inner background box
-   const qreal background_box_width { width() - 60.0 };
-   const qreal background_box_height { height() - 60.0 };
-   
-   const qreal background_box_aspect {
-      background_box_width / background_box_height
-   };
-
-   const qreal problem_width =
-      line2_bounding_box.width();
-   const qreal problem_height =
-      (line_height * 2 + 40 + font_metrics.height());
-   const qreal problem_crop_x_start =
-      text_pixmap.width() - problem_width;
-
-   const qreal problem_box_aspect =
-      problem_width / problem_height;
-
-   qreal scaled_width { };
-   qreal scaled_height { };
-
-   if (background_box_aspect >= 1.0)
+   if (current_problem_)
    {
-      // the background box is wider than it is tall
-
-      // make the height of problem box match background box height
-      scaled_height = background_box_height;
-      scaled_width = problem_box_aspect * scaled_height;
-
-      if (scaled_width > background_box_width)
-      {
-         scaled_width = background_box_width;
-         scaled_height = scaled_width / problem_box_aspect;
-      }
-   }
-   else
-   {
-      // the background box is taller than it is wide
-
-      // make the width of problem box match background box width
-      scaled_width = background_box_width;
-      scaled_height = scaled_width / problem_box_aspect;
-
-      if (scaled_height > background_box_height)
-      {
-         scaled_height = background_box_height;
-         scaled_width = problem_box_aspect * scaled_height;
-      }
+      current_problem_->OnPaintEvent(
+         paint_event,
+         *this);
    }
 
-   QPainter painter { this };
-
-   painter.setRenderHint(
-      QPainter::RenderHint::SmoothPixmapTransform,
-      true);
-
-   painter.drawPixmap(
-      QRectF { 
-         width() / 2.0 - scaled_width / 2.0,
-         height() / 2.0 - scaled_height / 2.0,
-         scaled_width,
-         scaled_height },
-      text_pixmap,
-      QRectF {
-         problem_crop_x_start,
-         0.0,
-         text_pixmap.width() - problem_crop_x_start,
-         problem_height });
+//   // pixmap is at pixel ratio of 1.0
+//   QPixmap text_pixmap {
+//      2048, 2048
+//   };
+//
+//   text_pixmap.fill(
+//      QColor { 0, 0, 0, 0 });
+//
+//   QPainter text_painter {
+//      &text_pixmap
+//   };
+//
+//   text_painter.setRenderHint(
+//      QPainter::RenderHint::Antialiasing,
+//      true);
+//   text_painter.setRenderHint(
+//      QPainter::RenderHint::TextAntialiasing,
+//      true);
+//
+//   const QFont font {
+//   #if _WIN32
+//      "Comic Sans MS",
+//   #else
+//      "Noto Sans Mono",
+//   #endif
+//      200
+//   };
+//
+//   text_painter.setFont(
+//      font);
+//
+//   // set the line thickness
+//   // set the color of line and font
+//   text_painter.setPen(
+//      QPen {
+//         QBrush { current_colors_->text },
+//         10.0
+//      });
+//
+//   const QFontMetrics font_metrics {
+//      text_painter.font()
+//   };
+//
+//   // problem two is always the longest line
+//   const QRect text_bounding_rect =
+//      font_metrics.tightBoundingRect(
+//         current_problem_.line2);
+//
+//   // add a bit of space between the lines
+//   const int32_t line_space_gap { 10 };
+//   const int32_t line_height =
+//      text_bounding_rect.height() +
+//      line_space_gap;
+//
+//   text_painter.drawText(
+//      QRect { 0, 0, text_pixmap.width(), text_pixmap.height() },
+//      current_problem_.line1,
+//      QTextOption { Qt::AlignmentFlag::AlignRight });
+//
+//   QRect line2_bounding_box;
+//   
+//   text_painter.drawText(
+//      QRect { 0, line_height, text_pixmap.width(), text_pixmap.height() },
+//      Qt::AlignmentFlag::AlignRight,
+//      current_problem_.line2,
+//      &line2_bounding_box);
+//
+//   text_painter.drawText(
+//      QRect { 0, line_height * 2 + 40, text_pixmap.width(), text_pixmap.height() },
+//      current_problem_.line3,
+//      QTextOption { Qt::AlignmentFlag::AlignRight });
+//
+//   const int32_t answer_line_width =
+//      text_bounding_rect.width();
+//   const qreal answer_line_y =
+//      line_height * 2 + 40 +
+//      (font_metrics.ascent() - text_bounding_rect.height()) / 1.25;
+//
+//   // draw the answer line
+//   text_painter.drawLine(
+//      QPointF {
+//         static_cast< qreal >(text_pixmap.width()),
+//         answer_line_y },
+//      QPointF {
+//         static_cast< qreal >(text_pixmap.width() - answer_line_width),
+//         answer_line_y });
+//
+//   // aspect of the inner background box
+//   const qreal background_box_width { width() - 60.0 };
+//   const qreal background_box_height { height() - 60.0 };
+//   
+//   const qreal background_box_aspect {
+//      background_box_width / background_box_height
+//   };
+//
+//   const qreal problem_width =
+//      line2_bounding_box.width();
+//   const qreal problem_height =
+//      (line_height * 2 + 40 + font_metrics.height());
+//   const qreal problem_crop_x_start =
+//      text_pixmap.width() - problem_width;
+//
+//   const qreal problem_box_aspect =
+//      problem_width / problem_height;
+//
+//   qreal scaled_width { };
+//   qreal scaled_height { };
+//
+//   if (background_box_aspect >= 1.0)
+//   {
+//      // the background box is wider than it is tall
+//
+//      // make the height of problem box match background box height
+//      scaled_height = background_box_height;
+//      scaled_width = problem_box_aspect * scaled_height;
+//
+//      if (scaled_width > background_box_width)
+//      {
+//         scaled_width = background_box_width;
+//         scaled_height = scaled_width / problem_box_aspect;
+//      }
+//   }
+//   else
+//   {
+//      // the background box is taller than it is wide
+//
+//      // make the width of problem box match background box width
+//      scaled_width = background_box_width;
+//      scaled_height = scaled_width / problem_box_aspect;
+//
+//      if (scaled_height > background_box_height)
+//      {
+//         scaled_height = background_box_height;
+//         scaled_width = problem_box_aspect * scaled_height;
+//      }
+//   }
+//
+//   QPainter painter { this };
+//
+//   painter.setRenderHint(
+//      QPainter::RenderHint::SmoothPixmapTransform,
+//      true);
+//
+//   painter.drawPixmap(
+//      QRectF { 
+//         width() / 2.0 - scaled_width / 2.0,
+//         height() / 2.0 - scaled_height / 2.0,
+//         scaled_width,
+//         scaled_height },
+//      text_pixmap,
+//      QRectF {
+//         problem_crop_x_start,
+//         0.0,
+//         text_pixmap.width() - problem_crop_x_start,
+//         problem_height });
 }
 
 void MathFactsWidget::PaintAnswerImage(
