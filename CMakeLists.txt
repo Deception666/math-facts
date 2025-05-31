@@ -12,6 +12,9 @@ set(
    no)
 
 set(
+   CMAKE_AUTOMOC
+   on)
+set(
    CMAKE_AUTORCC
    on)
 
@@ -25,13 +28,17 @@ set(
 add_executable(
    ${target_name}
    WIN32
+   arithmetic-problem.cpp
+   arithmetic-problem.hpp
    main.cpp
    mainicon.ico
    math-facts.ini
    math-facts.qrc
    math-facts.rc
    math-facts-widget.cpp
-   math-facts-widget.hpp)
+   math-facts-widget.hpp
+   problem.cpp
+   problem.hpp)
 
 find_package(
    Qt6

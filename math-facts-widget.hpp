@@ -1,7 +1,7 @@
 #ifndef _MATH_FACTS_WIDGET_HPP_
 #define _MATH_FACTS_WIDGET_HPP_
 
-#include <QtCore/QString>
+//#include <QtCore/QString>
 #include <QtCore/QTimer>
 #include <QtGui/QColor>
 #include <QtGui/QKeyEvent>
@@ -20,12 +20,17 @@
 
 class QSettings;
 
+class Problem;
+
+enum class AnswerResult : uint8_t;
+
 class MathFactsWidget :
    public QWidget
 {
 public:
    MathFactsWidget(
       QWidget * const parent ) noexcept;
+   virtual ~MathFactsWidget( ) noexcept;
 
 protected:
    virtual void paintEvent(
@@ -55,16 +60,16 @@ private:
       QColor text;
    };
 
-   struct Problem
-   {
-      QString line1;
-      QString line2;
-      QString line3;
-      int32_t answer;
-      std::vector< int32_t > responses;
-      std::chrono::steady_clock::time_point start;
-      std::chrono::steady_clock::time_point end;
-   };
+//   struct Problem
+//   {
+//      QString line1;
+//      QString line2;
+//      QString line3;
+//      int32_t answer;
+//      std::vector< int32_t > responses;
+//      std::chrono::steady_clock::time_point start;
+//      std::chrono::steady_clock::time_point end;
+//   };
 
    struct Randomizers
    {
@@ -76,10 +81,10 @@ private:
          0, 3
       };
 
-      std::vector< Problem > addition_problems;
-      std::vector< Problem > subtraction_problems;
-      std::vector< Problem > multiplication_problems;
-      std::vector< Problem > division_problems;
+      std::vector< std::unique_ptr< Problem > > addition_problems;
+      std::vector< std::unique_ptr< Problem > > subtraction_problems;
+      std::vector< std::unique_ptr< Problem > > multiplication_problems;
+      std::vector< std::unique_ptr< Problem > > division_problems;
    };
 
    struct Stopwatch
@@ -120,13 +125,14 @@ private:
    void SetupStopwatchImages( ) noexcept;
    void SetupTitleStage( ) noexcept;
 
-   Problem GenerateProblem( ) noexcept;
+   std::unique_ptr< Problem > GenerateProblem( ) noexcept;
    void GenerateAdditionProblem( ) noexcept;
    void GenerateSubtractionProblem( ) noexcept;
    void GenerateMultiplicationProblem( ) noexcept;
    void GenerateDivisionProblem( ) noexcept;
 
-   void GradeAnswer( ) noexcept;
+   void OnProblemAnswered(
+      const AnswerResult result ) noexcept;
    void WriteReport( ) const noexcept;
 
    std::string GetCurrentUserName( ) const noexcept;
@@ -160,8 +166,8 @@ private:
    std::array< Colors, 6 > colors_;
 
    Randomizers randomizers_;
-   Problem current_problem_;
-   std::vector< Problem > answered_problems_;
+   std::unique_ptr< Problem > current_problem_;
+   std::vector< std::unique_ptr< Problem > > answered_problems_;
    
    const QPixmap * answer_image_;
    QPixmap wrong_answer_image_;
