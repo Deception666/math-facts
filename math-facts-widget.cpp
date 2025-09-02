@@ -278,6 +278,7 @@ void MathFactsWidget::SetupTitleStage( ) noexcept
          { "pushButtonSub", ":/math-button-image-sub", TitleButtonID::SUB, EnabledMathFactBits::SUB },
          { "pushButtonMul", ":/math-button-image-mul", TitleButtonID::MUL, EnabledMathFactBits::MUL },
          { "pushButtonDiv", ":/math-button-image-div", TitleButtonID::DIV, EnabledMathFactBits::DIV },
+         { "pushButtonClock", ":/math-button-image-clock", TitleButtonID::CLOCK, EnabledMathFactBits::CLOCK },
          { "pushButtonAll", ":/math-buttons-image-sheet", TitleButtonID::ALL, EnabledMathFactBits::ALL }
       };
 
@@ -918,7 +919,8 @@ uint32_t MathFactsWidget::GetEnabledMathFacts( ) const noexcept
       EnabledMathFactBits::ADD |
       EnabledMathFactBits::SUB |
       EnabledMathFactBits::MUL |
-      EnabledMathFactBits::DIV
+      EnabledMathFactBits::DIV |
+      EnabledMathFactBits::CLOCK
    };
 
    const auto settings =

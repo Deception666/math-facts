@@ -45,6 +45,7 @@ private slots:
       SUB,
       MUL,
       DIV,
+      CLOCK,
       ALL
    };
 
@@ -117,7 +118,8 @@ private:
       SUB = 0x02,
       MUL = 0x04,
       DIV = 0x08,
-      ALL = 0x0F
+      CLOCK = 0x10,
+      ALL = 0x1F
    };
 
    void SetupColors( ) noexcept;
