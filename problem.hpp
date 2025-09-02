@@ -5,6 +5,7 @@
 
 #include <QtGui/QColor>
 
+#include <chrono>
 #include <cstdint>
 
 class QKeyEvent;
@@ -28,6 +29,12 @@ public:
       const QColor & color ) noexcept;
    const QColor & GetTextColor( ) const noexcept;
 
+   bool SetStartTime(
+      const std::chrono::steady_clock::time_point start_time ) noexcept;
+   bool SetEndTime(
+      const std::chrono::steady_clock::time_point end_time ) noexcept;
+   std::chrono::steady_clock::duration GetResponseTime( ) const noexcept;
+
    virtual void OnPaintEvent(
       QPaintEvent * paint_event,
       QWidget & widget ) noexcept = 0;
@@ -41,6 +48,9 @@ signals:
 
 private:
    QColor text_color_;
+
+   std::chrono::steady_clock::time_point start_time_;
+   std::chrono::steady_clock::time_point end_time_;
 
 };
 

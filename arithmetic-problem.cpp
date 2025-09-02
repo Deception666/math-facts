@@ -305,8 +305,6 @@ void ArithmeticProblem::GradeAnswer( ) noexcept
 
    if (response == answer_)
    {
-      //current_problem_.end =
-      //   std::chrono::steady_clock::now();
    }
    else
    {
