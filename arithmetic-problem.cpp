@@ -5,6 +5,7 @@
 #include <QtCore/QRectF>
 #include <QtCore/Qt>
 #include <QtCore/QtTypes>
+#include <QtCore/QVector>
 #include <QtGui/QBrush>
 #include <QtGui/QColor>
 #include <QtGui/QFont>
@@ -53,6 +54,38 @@ static int32_t GenerateAnswer(
       answer;
 }
 
+static QString ArithmeticSymbol(
+   const ArithmeticProblem::Operation operation ) noexcept
+{
+   QString symbol;
+
+   switch (operation)
+   {
+   case ArithmeticProblem::Operation::ADD:
+      symbol = "+";
+      break;
+
+   case ArithmeticProblem::Operation::SUB:
+      symbol = "-";
+      break;
+
+   case ArithmeticProblem::Operation::MUL:
+      symbol = "*";
+      break;
+
+   case ArithmeticProblem::Operation::DIV:
+      symbol = "/";
+      break;
+
+   default:
+      assert(false);
+      break;
+   }
+
+   return
+      symbol;
+}
+
 ArithmeticProblem::ArithmeticProblem(
    const int32_t top,
    const int32_t bottom,
@@ -66,6 +99,38 @@ operation_ { operation }
 
 ArithmeticProblem::~ArithmeticProblem( ) noexcept
 {
+}
+
+QVector< QString > ArithmeticProblem::GetResponses( ) const noexcept
+{
+   QVector< QString > responses;
+
+   for (const auto response : responses_)
+   {
+      responses.append(
+         QString::number(response));
+   }
+
+   return
+      responses;
+}
+
+QString ArithmeticProblem::GetQuestionWithAnswer( ) const noexcept
+{
+   return
+      top_ +
+      " " +
+      ArithmeticSymbol(operation_) +
+      " " +
+      bottom_ +
+      " = " +
+      QString::number(answer_);
+}
+
+size_t ArithmeticProblem::GetNumberOfResponses( ) const noexcept
+{
+   return
+      responses_.size();
 }
 
 void ArithmeticProblem::OnPaintEvent(
@@ -295,20 +360,13 @@ void ArithmeticProblem::GradeAnswer( ) noexcept
    const int32_t response =
       response_.toInt();
 
-   //current_problem_.responses.push_back(
-   //   response);
+   responses_.push_back(
+      response);
 
    const auto result =
       response == answer_ ?
       AnswerResult::CORRECT :
       AnswerResult::INCORRECT;
-
-   if (response == answer_)
-   {
-   }
-   else
-   {
-   }
 
    if (result == AnswerResult::INCORRECT)
    {

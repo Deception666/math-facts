@@ -25,6 +25,10 @@ public:
       const Operation operation ) noexcept;
    virtual ~ArithmeticProblem( ) noexcept;
 
+   virtual QVector< QString > GetResponses( ) const noexcept override;
+   virtual QString GetQuestionWithAnswer( ) const noexcept override;
+   virtual size_t GetNumberOfResponses( ) const noexcept override;
+
    virtual void OnPaintEvent(
       QPaintEvent * paint_event,
       QWidget & widget ) noexcept override;

@@ -13,6 +13,7 @@
 #include <QtCore/QString>
 #include <QtCore/Qt>
 #include <QtCore/QtTypes>
+#include <QtCore/QVector>
 #include <QtGui/QBrush>
 #include <QtGui/QFont>
 #include <QtGui/QFontMetrics>
@@ -588,13 +589,13 @@ void MathFactsWidget::WriteReport( ) const noexcept
                   std::chrono::milliseconds >(
                      answer->GetResponseTime());
 
-//            answered_problems_for_sort.push_back(
-//               &answer);
-//
-//            if (answer.responses.size() == 1)
-//            {
-//               ++percentage_answers_correct;
-//            }
+            answered_problems_for_sort.push_back(
+               answer.get());
+
+            if (answer->GetNumberOfResponses() == 1)
+            {
+               ++percentage_answers_correct;
+            }
          }
 
          if (!answered_problems_.empty())
@@ -638,20 +639,17 @@ void MathFactsWidget::WriteReport( ) const noexcept
                         answer.GetResponseTime());
 
                report_file
-//                  << answer.line1.toStdString()
-//                  << answer.line2.toStdString()
-//                  << " = "
-//                  << answer.line3.toStdString()
+                  << answer.GetQuestionWithAnswer().toStdString()
                   << "; response time ms = "
                   << response_time
                   << "; responses = ";
 
-//               for (const auto & response : answer.responses)
-//               {
-//                  report_file
-//                     << response
-//                     << "   ";
-//               }
+               for (const auto & response : answer.GetResponses())
+               {
+                  report_file
+                     << response.toStdString()
+                     << "   ";
+               }
 
                report_file << "\n";
             };
@@ -659,17 +657,17 @@ void MathFactsWidget::WriteReport( ) const noexcept
          report_file
             << "\ntop ten most responses\n";
 
-//         std::sort(
-//            answered_problems_for_sort.begin(),
-//            answered_problems_for_sort.end(),
-//            [ ] (
-//               const Problem * const l,
-//               const Problem * const r )
-//            {
-//               return
-//                  r->responses.size() <
-//                  l->responses.size();
-//            });
+         std::sort(
+            answered_problems_for_sort.begin(),
+            answered_problems_for_sort.end(),
+            [ ] (
+               const Problem * const l,
+               const Problem * const r )
+            {
+               return
+                  r->GetNumberOfResponses() <
+                  l->GetNumberOfResponses();
+            });
 
          std::for_each(
             answered_problems_for_sort.begin(),
