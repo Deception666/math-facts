@@ -28,17 +28,19 @@ set(
 add_executable(
    ${target_name}
    WIN32
-   arithmetic-problem.cpp
-   arithmetic-problem.hpp
-   main.cpp
-   mainicon.ico
-   math-facts.ini
-   math-facts.qrc
-   math-facts.rc
-   math-facts-widget.cpp
-   math-facts-widget.hpp
-   problem.cpp
-   problem.hpp)
+      arithmetic-problem.cpp
+      arithmetic-problem.hpp
+      main.cpp
+      mainicon.ico
+      math-facts.ini
+      math-facts.qrc
+      math-facts.rc
+      math-facts-widget.cpp
+      math-facts-widget.hpp
+      problem.cpp
+      problem.hpp
+      time-problem.cpp
+      time-problem.hpp)
 
 find_package(
    Qt6
@@ -69,10 +71,10 @@ set(
 target_link_libraries(
    ${target_name}
    PRIVATE
-   Qt::Core
-   Qt::Gui
-   Qt::Widgets
-   Qt::UiTools)
+      Qt::Core
+      Qt::Gui
+      Qt::Widgets
+      Qt::UiTools)
 
 string(
    CONCAT

@@ -45,7 +45,7 @@ private slots:
       SUB,
       MUL,
       DIV,
-      CLOCK,
+      TIME,
       ALL
    };
 
@@ -61,17 +61,6 @@ private:
       QColor text;
    };
 
-//   struct Problem
-//   {
-//      QString line1;
-//      QString line2;
-//      QString line3;
-//      int32_t answer;
-//      std::vector< int32_t > responses;
-//      std::chrono::steady_clock::time_point start;
-//      std::chrono::steady_clock::time_point end;
-//   };
-
    struct Randomizers
    {
       std::default_random_engine random_engine {
@@ -79,13 +68,14 @@ private:
       };
 
       std::uniform_int_distribution< uint32_t > problem_distribution {
-         0, 3
+         0, 4
       };
 
       std::vector< std::unique_ptr< Problem > > addition_problems;
       std::vector< std::unique_ptr< Problem > > subtraction_problems;
       std::vector< std::unique_ptr< Problem > > multiplication_problems;
       std::vector< std::unique_ptr< Problem > > division_problems;
+      std::vector< std::unique_ptr< Problem > > time_problems;
    };
 
    struct Stopwatch
@@ -118,7 +108,7 @@ private:
       SUB = 0x02,
       MUL = 0x04,
       DIV = 0x08,
-      CLOCK = 0x10,
+      TIME = 0x10,
       ALL = 0x1F
    };
 
@@ -132,6 +122,7 @@ private:
    void GenerateSubtractionProblem( ) noexcept;
    void GenerateMultiplicationProblem( ) noexcept;
    void GenerateDivisionProblem( ) noexcept;
+   void GenerateTimeProblem( ) noexcept;
 
    void OnProblemAnswered(
       const AnswerResult result ) noexcept;

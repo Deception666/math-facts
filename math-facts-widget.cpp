@@ -1,6 +1,7 @@
 #include "math-facts-widget.hpp"
 #include "arithmetic-problem.hpp"
 #include "problem.hpp"
+#include "time-problem.hpp"
 
 #include <QtCore/QFile>
 #include <QtCore/QObject>
@@ -238,7 +239,7 @@ void MathFactsWidget::SetupTitleStage( ) noexcept
          { "pushButtonSub", ":/math-button-image-sub", TitleButtonID::SUB, EnabledMathFactBits::SUB },
          { "pushButtonMul", ":/math-button-image-mul", TitleButtonID::MUL, EnabledMathFactBits::MUL },
          { "pushButtonDiv", ":/math-button-image-div", TitleButtonID::DIV, EnabledMathFactBits::DIV },
-         { "pushButtonClock", ":/math-button-image-clock", TitleButtonID::CLOCK, EnabledMathFactBits::CLOCK },
+         { "pushButtonClock", ":/math-button-image-clock", TitleButtonID::TIME, EnabledMathFactBits::TIME },
          { "pushButtonAll", ":/math-buttons-image-sheet", TitleButtonID::ALL, EnabledMathFactBits::ALL }
       };
 
@@ -292,6 +293,7 @@ std::unique_ptr< Problem > MathFactsWidget::GenerateProblem( ) noexcept
    if (randomizers_.addition_problems.empty() &&
        randomizers_.subtraction_problems.empty() &&
        randomizers_.multiplication_problems.empty() &&
+       randomizers_.division_problems.empty() &&
        randomizers_.division_problems.empty())
    {
       const uint32_t enabled_math_facts =
@@ -324,13 +326,21 @@ std::unique_ptr< Problem > MathFactsWidget::GenerateProblem( ) noexcept
       {
          GenerateDivisionProblem();
       }
+
+      if (enabled_math_facts & EnabledMathFactBits::TIME &&
+         (TitleButtonID::TIME == chosen_problems_ ||
+          TitleButtonID::ALL == chosen_problems_))
+      {
+         GenerateTimeProblem();
+      }
    }
 
    std::vector< std::unique_ptr< Problem > > * const problems[] {
       &randomizers_.addition_problems,
       &randomizers_.subtraction_problems,
       &randomizers_.multiplication_problems,
-      &randomizers_.division_problems
+      &randomizers_.division_problems,
+      &randomizers_.time_problems
    };
 
    uint32_t problem_type =
@@ -464,6 +474,30 @@ void MathFactsWidget::GenerateDivisionProblem () noexcept
    std::shuffle(
       randomizers_.division_problems.begin(),
       randomizers_.division_problems.end(),
+      std::default_random_engine {
+         randomizers_.random_engine });
+}
+
+void MathFactsWidget::GenerateTimeProblem( ) noexcept
+{
+   //for (int32_t denominator { 1 }; denominator <= 12; ++denominator)
+   //{
+   //   for (int32_t answer { }; answer <= 12; ++answer)
+   //   {
+         randomizers_.time_problems.emplace_back(
+            std::make_unique< TimeProblem >( ));
+
+         QObject::connect(
+            randomizers_.time_problems.back().get(),
+            &Problem::Answered,
+            this,
+            &MathFactsWidget::OnProblemAnswered);
+   //   }
+   //}
+
+   std::shuffle(
+      randomizers_.time_problems.begin(),
+      randomizers_.time_problems.end(),
       std::default_random_engine {
          randomizers_.random_engine });
 }
@@ -866,7 +900,7 @@ uint32_t MathFactsWidget::GetEnabledMathFacts( ) const noexcept
       EnabledMathFactBits::SUB |
       EnabledMathFactBits::MUL |
       EnabledMathFactBits::DIV |
-      EnabledMathFactBits::CLOCK
+      EnabledMathFactBits::TIME
    };
 
    const auto settings =

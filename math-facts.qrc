@@ -13,5 +13,9 @@
       <file alias="title-stage-buttons-ui">title-stage-buttons.ui</file>
       <file alias="stopwatch-base-image">stopwatch-base.png</file>
       <file alias="stopwatch-hand-image">stopwatch-hand.png</file>
+      <file alias="clock-center-post-image">clock-center-post.png</file>
+      <file alias="clock-face-image">clock-face.png</file>
+      <file alias="clock-hour-hand-image">clock-hour-hand.png</file>
+      <file alias="clock-minute-hand-image">clock-minute-hand.png</file>
    </qresource>
 </RCC>
