@@ -294,7 +294,7 @@ std::unique_ptr< Problem > MathFactsWidget::GenerateProblem( ) noexcept
        randomizers_.subtraction_problems.empty() &&
        randomizers_.multiplication_problems.empty() &&
        randomizers_.division_problems.empty() &&
-       randomizers_.division_problems.empty())
+       randomizers_.time_problems.empty())
    {
       const uint32_t enabled_math_facts =
          GetEnabledMathFacts();
@@ -480,20 +480,21 @@ void MathFactsWidget::GenerateDivisionProblem () noexcept
 
 void MathFactsWidget::GenerateTimeProblem( ) noexcept
 {
-   //for (int32_t denominator { 1 }; denominator <= 12; ++denominator)
-   //{
-   //   for (int32_t answer { }; answer <= 12; ++answer)
-   //   {
+   for (uint8_t hour { 1 }; hour <= 12; ++hour)
+   {
+      for (uint8_t minute { }; minute < 60; minute += 5)
+      {
          randomizers_.time_problems.emplace_back(
-            std::make_unique< TimeProblem >( ));
+            std::make_unique< TimeProblem >(
+               TimeProblem::Time { hour, minute }));
 
          QObject::connect(
             randomizers_.time_problems.back().get(),
             &Problem::Answered,
             this,
             &MathFactsWidget::OnProblemAnswered);
-   //   }
-   //}
+      }
+   }
 
    std::shuffle(
       randomizers_.time_problems.begin(),

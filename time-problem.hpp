@@ -3,13 +3,42 @@
 
 #include "problem.hpp"
 
+#include <QtCore/QString>
+#include <QtCore/QVector>
+
+#include <cstdint>
+#include <variant>
+
+class QString;
 class QWidget;
 
 class TimeProblem :
    public Problem
 {
 public:
-   TimeProblem( ) noexcept;
+   class Time
+   {
+   public:
+      Time(
+         const uint8_t hour,
+         const uint8_t minute ) noexcept;
+
+      bool GradeResponse(
+         const QString & response ) const noexcept;
+
+      QString Answer( ) const noexcept;
+
+      uint8_t Hour( ) const noexcept { return hour_; }
+      uint8_t Minute( ) const noexcept { return minute_; }
+
+   private:
+      uint8_t hour_;
+      uint8_t minute_;
+
+   };
+
+   TimeProblem(
+      Time time ) noexcept;
    virtual ~TimeProblem( ) noexcept;
 
    virtual QVector< QString > GetResponses( ) const noexcept override;
@@ -26,10 +55,16 @@ public:
 private:
    void PaintClock(
       QWidget & widget ) noexcept;
-   void PaintResponse(
+   void PaintQuestionAndResponse(
       QWidget & widget ) noexcept;
 
    void GradeAnswer( ) noexcept;
+
+   QString response_;
+
+   QVector< QString > responses_;
+
+   std::variant< Time > problem_;
 
 };
 
