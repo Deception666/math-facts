@@ -17,5 +17,8 @@
       <file alias="clock-face-image">clock-face.png</file>
       <file alias="clock-hour-hand-image">clock-hour-hand.png</file>
       <file alias="clock-minute-hand-image">clock-minute-hand.png</file>
+      <file alias="afternoon-sun-image">afternoon-sun.png</file>
+      <file alias="morning-sun-image">morning-sun.png</file>
+      <file alias="morning-afternoon-scene-image">morning-afternoon-scene.png</file>
    </qresource>
 </RCC>

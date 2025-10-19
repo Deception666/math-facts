@@ -488,12 +488,23 @@ void MathFactsWidget::GenerateTimeProblem( ) noexcept
             std::make_unique< TimeProblem >(
                TimeProblem::Time { hour, minute }));
 
-         QObject::connect(
-            randomizers_.time_problems.back().get(),
-            &Problem::Answered,
-            this,
-            &MathFactsWidget::OnProblemAnswered);
+         randomizers_.time_problems.emplace_back(
+            std::make_unique< TimeProblem >(
+               TimeProblem::MilitaryTime { hour, minute, false }));
+
+         randomizers_.time_problems.emplace_back(
+            std::make_unique< TimeProblem >(
+               TimeProblem::MilitaryTime { hour, minute, true }));
       }
+   }
+
+   for (const auto & time_problem : randomizers_.time_problems)
+   {
+      QObject::connect(
+         time_problem.get(),
+         &Problem::Answered,
+         this,
+         &MathFactsWidget::OnProblemAnswered);
    }
 
    std::shuffle(

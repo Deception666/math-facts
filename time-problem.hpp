@@ -8,7 +8,10 @@
 
 #include <cstdint>
 #include <variant>
+#include <utility>
 
+class QPixmap;
+class QSize;
 class QString;
 class QWidget;
 
@@ -27,6 +30,7 @@ public:
          const QString & response ) const noexcept;
 
       QString Answer( ) const noexcept;
+      std::pair< QString, QSize > Question( ) const noexcept;
 
       uint8_t Hour( ) const noexcept { return hour_; }
       uint8_t Minute( ) const noexcept { return minute_; }
@@ -37,8 +41,35 @@ public:
 
    };
 
+   class MilitaryTime
+   {
+   public:
+      MilitaryTime(
+         const uint8_t hour,
+         const uint8_t minute,
+         const bool is_afternoon ) noexcept;
+
+      bool GradeResponse(
+         const QString & response ) const noexcept;
+
+      QString Answer( ) const noexcept;
+      std::pair< QString, QSize > Question( ) const noexcept;
+
+      uint8_t Hour( ) const noexcept { return hour_; }
+      uint8_t Minute( ) const noexcept { return minute_; }
+      bool IsAfternoon( ) const noexcept { return is_afternoon_; }
+
+   private:
+      uint8_t hour_;
+      uint8_t minute_;
+      bool is_afternoon_;
+
+   };
+
    TimeProblem(
       Time time ) noexcept;
+   TimeProblem(
+      MilitaryTime time ) noexcept;
    virtual ~TimeProblem( ) noexcept;
 
    virtual QVector< QString > GetResponses( ) const noexcept override;
@@ -53,10 +84,15 @@ public:
       const QWidget & widget ) noexcept override;
 
 private:
-   void PaintClock(
+   void PaintTimeProblem(
+      QWidget & widget ) noexcept;
+   void PaintMilitaryTimeProblem(
       QWidget & widget ) noexcept;
    void PaintQuestionAndResponse(
       QWidget & widget ) noexcept;
+
+   QPixmap RenderClock( ) const noexcept;
+   QPixmap RenderSunScene( ) const noexcept;
 
    void GradeAnswer( ) noexcept;
 
@@ -64,7 +100,7 @@ private:
 
    QVector< QString > responses_;
 
-   std::variant< Time > problem_;
+   std::variant< Time, MilitaryTime > problem_;
 
 };
 
