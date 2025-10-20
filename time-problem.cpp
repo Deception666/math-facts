@@ -248,10 +248,22 @@ void TimeProblem::OnKeyReleaseEvent(
    case Qt::Key::Key_7: [[fall_through]];
    case Qt::Key::Key_8: [[fall_through]];
    case Qt::Key::Key_9: [[fall_through]];
-   case Qt::Key::Key_Colon:
+   case Qt::Key::Key_Colon: [[fall_through]];
+   case Qt::Key::Key_Semicolon:
       if (response_.size() < 5)
       {
-         response_ += static_cast< QChar >(key);
+         // sometimes the user will release the shift key and
+         // sometimes qt doesn't always register the shift key
+         // to make this easier on the user, just add the colon
+         if (key == Qt::Key::Key_Semicolon)
+         {
+            response_ +=
+               static_cast< QChar >(Qt::Key::Key_Colon);
+         }
+         else
+         {
+            response_ += static_cast< QChar >(key);
+         }
       }
 
       break;
